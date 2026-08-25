@@ -668,29 +668,51 @@
   .history-link:hover{background:rgba(23,22,27,.08); border-color:var(--ink-45);}
   .history-link span{transition:transform .2s ease;}
   .history-link:hover span{transform:translateX(2px);}
+
+  /* ---- presentation-mode speaker notes (only built when ?present=1) ---- */
+  .speaker-notes-panel{
+    position:fixed; left:0; right:0; bottom:0; z-index:500;
+    max-height:26vh; overflow-y:auto;
+    background:var(--ink); color:var(--cream);
+    padding:14px 64px; box-sizing:border-box;
+    font-family:var(--sans); font-size:13.5px; line-height:1.55;
+  }
+  .speaker-notes-label{
+    font-family:var(--mono); font-size:10.5px; letter-spacing:.08em;
+    text-transform:uppercase; color:rgba(255,255,255,.5); margin:0 0 6px;
+  }
+  .speaker-notes-body{margin:0; max-width:900px;}
+  .speaker-notes-body ul{margin:0; padding-left:18px;}
+  .speaker-notes-body li{margin:0 0 4px;}
+  .speaker-notes-hint{
+    position:fixed; right:16px; bottom:16px; z-index:501;
+    font-family:var(--mono); font-size:10.5px; color:var(--ink-45);
+    background:var(--cream); border:1px solid var(--line); border-radius:20px;
+    padding:5px 12px;
+  }
 </style>
 </head>
 <body>
 
   <div class="topbar">
     <div class="brand"><a class="brand-home" href="../"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M15 18l-6-6 6-6"/></svg>Back to landing page</a></div>
-    <div class="dots" id="dots"></div>
+    <div class="dots" id="stytchDots"></div>
     <div class="counter-nav">
       <button class="navbtn" onclick="go(-1)" aria-label="Previous">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M15 18l-6-6 6-6"/></svg>
       </button>
-      <div class="counter"><span id="counterNow">01</span> / <span id="counterTotal">08</span></div>
+      <div class="counter"><span id="stytchCounterNow">01</span> / <span id="stytchCounterTotal">08</span></div>
       <button class="navbtn" onclick="go(1)" aria-label="Next">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 18l6-6-6-6"/></svg>
       </button>
     </div>
   </div>
 
-  <div class="deck" id="deck">
+  <div class="deck" id="deckStytch">
 
     <!-- 1. HERO — masked laptop frame, matching Trust's slide 1 exactly (same
          asset: assets/macbook-air-frame.png, same .frame-laptop2 technique) -->
-    <section class="slide layout-hero active">
+    <section class="slide layout-hero active" id="slideHeroStytch">
       <div class="text-block">
         <p class="kicker">Stytch · SDK Integration Builder</p>
         <h1>Driving SDK Adoption</h1>
@@ -705,7 +727,7 @@
     </section>
 
     <!-- 2. PROBLEM — matches Trust's slide 2 layout-text exactly -->
-    <section class="slide layout-text">
+    <section class="slide layout-text" id="slideProblemStytch">
       <div class="text-block">
         <p class="kicker">The Problem</p>
         <h1>Fast Auth, Slow Evaluation</h1>
@@ -718,7 +740,7 @@
     </section>
 
     <!-- 3. PERSONA — matches Trust's slide 4 layout-persona exactly -->
-    <section class="slide layout-persona">
+    <section class="slide layout-persona" id="slidePersonaStytch">
       <div class="text-block">
         <p class="kicker">Who This Is For</p>
         <h1>Two Audiences, One Tool</h1>
@@ -847,7 +869,7 @@
 
     <!-- 6. THE IDEA — bridges the reference-app limitation into the
          Integration Builder concept, matches Trust's slide 2 layout-text -->
-    <section class="slide layout-text">
+    <section class="slide layout-text" id="slideSolution">
       <div class="text-block">
         <p class="kicker">The Solution</p>
         <h1>The Answer Wasn't Another Demo — It Was a Tool</h1>
@@ -884,7 +906,7 @@
           <div class="step-nav-body"><p class="step-nav-desc">View Code turns the config into a real integration the moment evaluation ends with production ready code.</p></div>
         </div>
       </div>
-      <button class="history-link" id="journeyHistoryLink" onclick="openHistoryOverlay()">See how we got here <span aria-hidden="true">&rarr;</span></button>
+      <button class="history-link" id="journeyHistoryLink" onclick="window.__stytchDeck.openHistoryOverlay()">See how we got here <span aria-hidden="true">&rarr;</span></button>
       <div class="journey-panel">
         <div class="journey-tool-frame">
           <div id="journeyToolMount"></div>
@@ -897,7 +919,7 @@
          what it fixed. Card grid, not a bulleted list — see Trust's version
          for the full reasoning (Kelly flagged the prose-list as too
          text-heavy). -->
-    <section class="slide layout-timeline">
+    <section class="slide layout-timeline" id="slideChallengesStytch">
       <div class="text-block">
         <p class="kicker">The Friction</p>
         <h1>Challenges</h1>
@@ -909,7 +931,7 @@
         </div>
         <div class="friction-card">
           <p class="friction-card-title">Refactored the SDK's styling object</p>
-          <p class="friction-card-desc">A smooth customization experience meant needing to clean up the actual styling config first. Required working closely with engineering. See <button class="friction-link" onclick="jumpToJourneyStep(2)">Branding</button>.</p>
+          <p class="friction-card-desc">A smooth customization experience meant needing to clean up the actual styling config first. Required working closely with engineering. See <button class="friction-link" onclick="window.__stytchDeck.jumpToJourneyStep(2)">Branding</button>.</p>
         </div>
       </div>
     </section>
@@ -919,7 +941,7 @@
          component is specifically "what we're validating" going forward
          (pre-beta), which doesn't fit here — this shipped, so it's framed
          as delivered outcomes instead, same list style (•, not →). -->
-    <section class="slide layout-timeline">
+    <section class="slide layout-timeline" id="slideImpact">
       <div class="text-block">
         <p class="kicker">Impact</p>
         <h1>What This Actually Fixed</h1>
@@ -941,7 +963,7 @@
     </section>
 
     <!-- 9. LIVE PROTOTYPE -->
-    <section class="slide" id="liveSlide" style="padding:24px 48px;">
+    <section class="slide hide-in-present" id="liveSlide" style="padding:24px 48px;">
       <div class="live-callout">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M9 2a2 2 0 0 1 2 2v7l1.3-.6a2.3 2.3 0 0 1 3.1 1.5l1.3 5a2.3 2.3 0 0 1-1.6 2.8l-4.8 1.3a4 4 0 0 1-4.5-1.7L3.4 15A2 2 0 0 1 5 12h1V4a2 2 0 0 1 2-2z"/><path d="M9 9V4"/></svg>
         <span>Try it yourself — toggle products, restyle it, view the code</span>
@@ -950,16 +972,27 @@
       <div id="stytchToolMount" style="flex:1; min-height:0;"></div>
     </section>
 
+    <!-- PRESENTATION-MODE ONLY — closes the talk. The live tool above is
+         hidden in present mode (see hide-in-present on it), so this stands
+         in as the deck's closer for a live talk. -->
+    <section class="slide layout-text present-only" id="slideThankYou">
+      <div class="text-block">
+        <p class="kicker">Thank You</p>
+        <h1>Questions?</h1>
+        <p class="teaser">Two case studies, one throughline: identity has to prove itself — whether that's an AI agent earning the right to act, or an SDK earning a customer's confidence before they write a line of code.</p>
+      </div>
+    </section>
+
   </div>
 
   <!-- "how we got here" wizard — single overlay shell (see CSS comment
        above), opened only from the Journey slide's "See how we got here"
        link, never auto-opened -->
-  <div class="history-overlay" id="historyOverlay">
+  <div class="history-overlay" id="stytchHistoryOverlay">
     <div class="history-panel">
-      <button class="history-close" id="historyClose" aria-label="Close"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M6 6l12 12M18 6L6 18"/></svg></button>
-      <button class="history-arrow history-arrow-prev" id="historyPrev" aria-label="Previous"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M15 18l-6-6 6-6"/></svg></button>
-      <button class="history-arrow history-arrow-next" id="historyNext" aria-label="Next"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 18l6-6-6-6"/></svg></button>
+      <button class="history-close" id="stytchHistoryClose" aria-label="Close"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M6 6l12 12M18 6L6 18"/></svg></button>
+      <button class="history-arrow history-arrow-prev" id="stytchHistoryPrev" aria-label="Previous"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M15 18l-6-6 6-6"/></svg></button>
+      <button class="history-arrow history-arrow-next" id="stytchHistoryNext" aria-label="Next"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 18l6-6-6-6"/></svg></button>
       <div class="history-head">
         <p class="kicker" id="historyKicker">How We Got Here</p>
       </div>
@@ -1137,16 +1170,31 @@
 
 <script src="tool.js"></script>
 <script>
-  const slides = document.querySelectorAll('.slide');
+// wrapped in an IIFE so this deck's `slides`/`idx`/`go`/`render`/etc. can't
+// collide with the Trust deck's identically-named locals when both are
+// merged into one page by presentation/index.html (see that file's
+// coordinator, and window.__stytchDeck exposed at the bottom of this script)
+(function(){
+  // ?present=1 switches on the live-talk build: shows present-only slides
+  // (the closing "Thank You") and hides hide-in-present ones (the free-roam
+  // "Try it yourself" tool) — the default (no query param) is byte-for-byte
+  // the published case study.
+  const PRESENT = new URLSearchParams(location.search).has('present');
+  const slides = Array.from(document.querySelectorAll('.slide')).filter(s => {
+    if (PRESENT && s.classList.contains('hide-in-present')) return false;
+    if (!PRESENT && s.classList.contains('present-only')) return false;
+    return true;
+  });
   const total = slides.length;
   let idx = 0;
   // -1 so the very first render() (idx already 0) still counts as a real
   // "entered slide 0" transition — see the __onActivate check below
   let prevIdx = -1;
   // set the first time pressing next from the Journey slide's step 4 opens
-  // "How We Got Here" instead of advancing — see go(dir)
-  let journeyHistoryAutoOpened = false;
-  const dotsEl = document.getElementById('dots');
+  // "How We Got Here" instead of advancing — see go(dir). In presentation
+  // mode this detour is always skipped for time; the manual link still works.
+  let journeyHistoryAutoOpened = PRESENT;
+  const dotsEl = document.getElementById('stytchDots');
   slides.forEach((s, i) => {
     const d = document.createElement('div');
     d.className = 'dot' + (i === 0 ? ' active' : '');
@@ -1154,7 +1202,7 @@
     dotsEl.appendChild(d);
   });
   const dots = dotsEl.querySelectorAll('.dot');
-  document.getElementById('counterTotal').textContent = String(total).padStart(2, '0');
+  document.getElementById('stytchCounterTotal').textContent = String(total).padStart(2, '0');
 
   function render(){
     // defensive reset — the Journey slide's style demo used to be able to
@@ -1170,7 +1218,7 @@
     if (idx !== prevIdx && prevIdx !== -1 && slides[prevIdx].__onDeactivate) slides[prevIdx].__onDeactivate();
     slides.forEach((s, i) => s.classList.toggle('active', i === idx));
     dots.forEach((d, i) => d.classList.toggle('active', i === idx));
-    document.getElementById('counterNow').textContent = String(idx + 1).padStart(2, '0');
+    document.getElementById('stytchCounterNow').textContent = String(idx + 1).padStart(2, '0');
     // a slide can expose __onActivate (same convention as __stepNav
     // below) to run its own "just became visible" logic — the Journey
     // slide uses this to (re)start whichever step's demo is current. Fixes
@@ -1187,7 +1235,7 @@
     // the "how we got here" wizard, while open, owns the deck's own
     // next/prev controls (on-screen buttons and arrow keys alike) — same
     // convention as the __stepNav interception below, one level up
-    const historyOverlay = document.getElementById('historyOverlay');
+    const historyOverlay = document.getElementById('stytchHistoryOverlay');
     if (historyOverlay && historyOverlay.classList.contains('active')) { historyGo(dir); return; }
     // slides that expose __stepNav (Journey's step-nav, the reference-apps
     // picker) get first crack at a next/prev press — step through their own
@@ -1203,19 +1251,41 @@
       // the first time only) — returning true means it handled the press
       if (dir === 1 && cur === nav.stepCount - 1 && nav.onLastNext && nav.onLastNext()) return;
     }
-    idx = Math.max(0, Math.min(total - 1, idx + dir));
+    const nextIdx = Math.max(0, Math.min(total - 1, idx + dir));
+    // already at the first slide with nowhere further back to go — hand
+    // back to the previous case study instead of just stopping. Two
+    // contexts this matters in: embedded in an iframe shell (postMessage to
+    // the parent), or merged into one page by presentation/index.html
+    // (direct callback, set by that page's coordinator before this runs)
+    if (PRESENT && dir === -1 && nextIdx === idx) {
+      if (window.parent !== window) {
+        window.parent.postMessage({ source: 'ai-present', type: 'boundary', dir: -1 }, '*');
+        return;
+      }
+      if (window.__aiPresentBoundary) { window.__aiPresentBoundary('stytch', -1); return; }
+    }
+    idx = nextIdx;
     render();
   }
   window.addEventListener('keydown', (e) => {
-    const historyOverlay = document.getElementById('historyOverlay');
+    // when merged into presentation/index.html, a shared coordinator owns
+    // arrow-key navigation across both case studies (see that file) and
+    // calls this deck's own go() directly — the arrow branches below would
+    // otherwise double-process every press on top of that. Escape-to-close
+    // still works locally either way.
+    const historyOverlay = document.getElementById('stytchHistoryOverlay');
     if (historyOverlay && historyOverlay.classList.contains('active')) {
       if (e.key === 'Escape') closeHistoryOverlay();
-      if (e.key === 'ArrowRight') go(1);
-      if (e.key === 'ArrowLeft') go(-1);
+      if (!window.__aiPresentMerged) {
+        if (e.key === 'ArrowRight') go(1);
+        if (e.key === 'ArrowLeft') go(-1);
+      }
       return;
     }
-    if (e.key === 'ArrowRight') go(1);
-    if (e.key === 'ArrowLeft') go(-1);
+    if (!window.__aiPresentMerged) {
+      if (e.key === 'ArrowRight') go(1);
+      if (e.key === 'ArrowLeft') go(-1);
+    }
   });
 
   // "how we got here" wizard — single-wizard version of Trust's
@@ -1225,7 +1295,7 @@
   // inline in the HTML), and its 3 steps are just before/after tab-toggles.
   let historyStep = 1;
   function historyStepCount(){
-    return document.querySelectorAll('#historyOverlay .history-step').length;
+    return document.querySelectorAll('#stytchHistoryOverlay .history-step').length;
   }
   // step 1's three mocks used to animate all at once — hard to focus on
   // any one of them. They now run one at a time in a fixed order (tabs ->
@@ -1233,7 +1303,7 @@
   // cycle, then call onDone" function instead of self-looping forever, so
   // a sequencer (runStep1Sequence, below) can chain them.
   function historyOverlayActiveOnStep(step){
-    const overlay = document.getElementById('historyOverlay');
+    const overlay = document.getElementById('stytchHistoryOverlay');
     return !!overlay && overlay.classList.contains('active') && historyStep === step;
   }
   // "Tabs per element" — cycles Products -> Buttons -> Text -> Container
@@ -1345,7 +1415,7 @@
     const list = document.getElementById('hwgDdList');
     if (!select || !list) return;
     function loop(){
-      if (!document.getElementById('historyOverlay').classList.contains('active') || historyStep !== 2) { stopDropdownMock(); return; }
+      if (!document.getElementById('stytchHistoryOverlay').classList.contains('active') || historyStep !== 2) { stopDropdownMock(); return; }
       select.classList.remove('open');
       list.classList.remove('open');
       list.scrollTop = 0;
@@ -1374,10 +1444,10 @@
     2: 'How We Got Here — How should products be picked?',
   };
   function updateHistoryStep(){
-    document.querySelectorAll('#historyOverlay .history-step').forEach(s => s.classList.toggle('active', Number(s.dataset.step) === historyStep));
+    document.querySelectorAll('#stytchHistoryOverlay .history-step').forEach(s => s.classList.toggle('active', Number(s.dataset.step) === historyStep));
     const kicker = document.getElementById('historyKicker');
     if (kicker) kicker.textContent = historyKickerText[historyStep] || 'How We Got Here';
-    const prev = document.getElementById('historyPrev');
+    const prev = document.getElementById('stytchHistoryPrev');
     if (prev) prev.disabled = historyStep === 1;
     // next stays enabled on the last step — historyGo(1) closes the wizard
     // and drops back to the Journey slide instead of being a dead button
@@ -1396,7 +1466,7 @@
     updateHistoryStep();
   }
   function openHistoryOverlay(){
-    const overlay = document.getElementById('historyOverlay');
+    const overlay = document.getElementById('stytchHistoryOverlay');
     if (!overlay) return;
     historyStep = 1;
     // .active has to be set BEFORE updateHistoryStep() runs, not after —
@@ -1408,17 +1478,17 @@
     updateHistoryStep();
   }
   function closeHistoryOverlay(){
-    const overlay = document.getElementById('historyOverlay');
+    const overlay = document.getElementById('stytchHistoryOverlay');
     if (overlay) overlay.classList.remove('active');
     stopStep1Sequence();
     stopDropdownMock();
   }
   (function initHistoryOverlay(){
-    const overlay = document.getElementById('historyOverlay');
+    const overlay = document.getElementById('stytchHistoryOverlay');
     if (!overlay) return;
-    document.getElementById('historyClose').onclick = closeHistoryOverlay;
-    document.getElementById('historyPrev').onclick = () => historyGo(-1);
-    document.getElementById('historyNext').onclick = () => historyGo(1);
+    document.getElementById('stytchHistoryClose').onclick = closeHistoryOverlay;
+    document.getElementById('stytchHistoryPrev').onclick = () => historyGo(-1);
+    document.getElementById('stytchHistoryNext').onclick = () => historyGo(1);
     overlay.addEventListener('click', (e) => { if (e.target === overlay) closeHistoryOverlay(); });
   })();
 
@@ -2029,6 +2099,120 @@
       stopStep3Anim();
     };
   })();
+
+  // ---- presentation-mode speaker notes (only built when ?present=1) ----
+  if (PRESENT) {
+    const NOTES = {
+      slideHeroStytch: `<p>[~30 sec]</p><ul>
+        <li>Title card. Prebuilt SDK auth UI was supposed to be the fast path — no components to build — but adoption didn't match that promise.</li>
+      </ul>`,
+      slideProblemStytch: `<p>[~1.5 min]</p><ul>
+        <li>The SDK's whole pitch was fast auth. But <em>evaluating</em> it wasn't fast — customers had no way to know if it actually fit their product without integrating it first.</li>
+        <li>First read was a capability gap — closed API feature-parity gaps first. Customers still weren't adopting. The real blocker was never capability, it was proof/confidence.</li>
+        <li>This is the deck's throughline: feature parity ≠ confidence.</li>
+      </ul>`,
+      slidePersonaStytch: `<p>[~1 min]</p><ul>
+        <li>Two audiences: the Evaluator (a team deciding if Stytch fits, before writing code) and the Solutions Engineer (Stytch's own team, who used to hand-build one-off demos to answer exactly the Evaluator's question).</li>
+        <li>Don't spoil it yet, but unlike Owl Trade's two personas, the SE side isn't hypothetical — it pays off on the Impact slide.</li>
+      </ul>`,
+      demoSlide: `<p>[~30 sec]</p><ul>
+        <li>Customers kept asking the same concrete question: "what would this actually look like inside <em>my</em> product?" The closest thing Stytch had were example apps.</li>
+      </ul>`,
+      demoSelectSlide: `<p>[~1.5 min]</p><ul>
+        <li>Hello Socks / Survey Amp: real example apps built on the SDK. They help, but only show what the SDK looks like generically — not what it'd look like for a customer's own product, which is the actual question.</li>
+        <li>Click through one or both briefly — this is meant to land as "close, but not quite the answer."</li>
+      </ul>`,
+      slideSolution: `<p>[~1 min]</p><ul>
+        <li>The answer wasn't another demo — it was a tool: an interactive playground, live, before any code is written. This is the pivot into the deck's centerpiece.</li>
+      </ul>`,
+      'journeySlide:1': `<p>[~1.5 min] Step 1 — Explore Stytch's products</p><ul>
+        <li>Full product catalog as a button grid, not hidden behind a dropdown/search — deliberate, since customers evaluating Stytch often don't know the full catalog exists yet.</li>
+        <li>The live tool autoplays through several product chips on its own — let it play, nothing to click.</li>
+      </ul>`,
+      'journeySlide:2': `<p>[~1.5 min] Step 2 — Branding</p><ul>
+        <li>One flat panel of properties, not sections/tabs you already have to know to look in — styling questions kept breaking down over "where does this property even show up?"</li>
+        <li>Root cause: auditing the SDK's real config showed the mapping between the design system and the SDK's settings had drifted as things scaled — even the Stytch team couldn't always say what mapped to what. Fixing this meant refactoring the SDK's actual styling object, in close collaboration with engineering.</li>
+        <li>"See how we got here" link covers the dropdown-vs-grid and tabbed-vs-flat decisions — skipping the detour today for time, mention it's there.</li>
+      </ul>`,
+      'journeySlide:3': `<p>[~1.5 min] Step 3 — Try the real flow, not a screenshot</p><ul>
+        <li>Not a static preview — a fully working SDK instance. Customers click through the real sign-up/login flow (email → OTP → success) to judge brand fit AND actual behavior at once.</li>
+        <li>This step is fully scripted (auto-types email, auto-fills OTP, shows success) — just narrate over it.</li>
+      </ul>`,
+      'journeySlide:4': `<p>[~1 min] Step 4 — Shippable code</p><ul>
+        <li>View Code turns the live config into a real integration snippet the moment evaluation ends — "how do I get this into my product, quickly" is already answered, not a separate build step.</li>
+      </ul>`,
+      slideChallengesStytch: `<p>[~1.5 min]</p><ul>
+        <li>Not a roadmap project — started as a Hack Week idea, needed leadership buy-in to get fully productionized.</li>
+        <li>The smooth customization experience only worked because the SDK's actual styling config got refactored first — working closely with engineering, not just a UI layer on top of what existed.</li>
+      </ul>`,
+      slideImpact: `<p>[~1.5 min]</p><ul>
+        <li>No adoption/conversion numbers yet, but real validation: the Solutions Engineers whose one-off demos this replaced started using the Integration Builder themselves, on real customer and prospect calls.</li>
+        <li>Recap: fast/easy preview replacing the SE-demo workaround, View Code cutting time-to-value, customers now validating product fit/brand fit/real UX flows themselves instead of taking it on faith.</li>
+      </ul>`,
+      slideThankYou: `<p>[~1 min]</p><ul>
+        <li>Thank you — open it up to questions.</li>
+        <li>If useful, recap the throughline connecting both talks: identity has to prove itself, whether that's an agent earning the right to act, or an SDK earning a customer's confidence — show, don't tell, in both cases.</li>
+      </ul>`,
+    };
+
+    const notesPanel = document.createElement('div');
+    notesPanel.className = 'speaker-notes-panel';
+    notesPanel.id = 'stytchNotesPanel';
+    document.body.appendChild(notesPanel);
+    const notesHint = document.createElement('div');
+    notesHint.className = 'speaker-notes-hint';
+    notesHint.id = 'stytchNotesHint';
+    notesHint.textContent = 'N — toggle speaker notes';
+    document.body.appendChild(notesHint);
+
+    function currentNotesKey(){
+      const s = document.querySelector('.slide.active');
+      if (!s || !s.id) return null;
+      const step = s.querySelector('.step-nav-item.active');
+      return step ? (s.id + ':' + step.dataset.step) : s.id;
+    }
+    function updateSpeakerNotes(){
+      const key = currentNotesKey();
+      const html = key && NOTES[key];
+      notesPanel.innerHTML = html
+        ? '<p class="speaker-notes-label">Speaker Notes</p><div class="speaker-notes-body">' + html + '</div>'
+        : '';
+    }
+    new MutationObserver(updateSpeakerNotes).observe(
+      document.getElementById('deckStytch'),
+      { attributes:true, attributeFilter:['class'], subtree:true }
+    );
+    updateSpeakerNotes();
+
+    let notesVisible = true;
+    window.addEventListener('keydown', (e) => {
+      if (e.key === 'n' || e.key === 'N') {
+        notesVisible = !notesVisible;
+        notesPanel.style.display = notesVisible ? '' : 'none';
+      }
+    });
+  }
+
+  // backward-compat for this deck's own (hidden, when merged) topbar
+  // buttons, which reference `go` as a bare global via onclick="go(1)"
+  window.go = go;
+
+  // controlled surface for presentation/index.html's coordinator to drive
+  // this deck from outside the IIFE once both case studies are merged into
+  // one page — see the boundary-crossing checks inside go() above
+  window.__stytchDeck = {
+    get idx(){ return idx; },
+    go,
+    render,
+    openHistoryOverlay,
+    jumpToJourneyStep: window.jumpToJourneyStep,
+    visibleCount: total,
+    currentVisibleNumber(){ return idx + 1; },
+    jumpToFirst(){ idx = 0; render(); },
+    jumpToLast(){ idx = total - 1; render(); },
+    jumpToVisibleNumber(n){ idx = n - 1; render(); },
+  };
+})();
 </script>
 </body>
 </html>
