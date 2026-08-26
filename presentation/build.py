@@ -63,11 +63,6 @@ ai_script = ai_scripts[0]
 AI_SLIDES_QUERY = "const slides = document.querySelectorAll('.slide');"
 assert ai_script.count(AI_SLIDES_QUERY) == 1
 ai_script = ai_script.replace(AI_SLIDES_QUERY, "const slides = document.querySelectorAll('#phaseAgentIdentity .slide');")
-# same cross-contamination risk in the speaker-notes code: it independently
-# reads "whichever .slide is active" to key its notes lookup, unscoped
-AI_NOTES_QUERY = "const s = document.querySelector('.slide.active');"
-assert ai_script.count(AI_NOTES_QUERY) == 1
-ai_script = ai_script.replace(AI_NOTES_QUERY, "const s = document.querySelector('#phaseAgentIdentity .slide.active');")
 
 ai_scoped_css, ai_globals = scope_css(ai_style, "#phaseAgentIdentity")
 print("agent-identity globals:", [g[0] for g in ai_globals])
@@ -85,9 +80,6 @@ st_script = st_scripts[0]
 ST_SLIDES_QUERY = "const slides = Array.from(document.querySelectorAll('.slide')).filter(s => {"
 assert st_script.count(ST_SLIDES_QUERY) == 1
 st_script = st_script.replace(ST_SLIDES_QUERY, "const slides = Array.from(document.querySelectorAll('#phaseStytch .slide')).filter(s => {")
-ST_NOTES_QUERY = "const s = document.querySelector('.slide.active');"
-assert st_script.count(ST_NOTES_QUERY) == 1
-st_script = st_script.replace(ST_NOTES_QUERY, "const s = document.querySelector('#phaseStytch .slide.active');")
 
 st_scoped_css, st_globals = scope_css(st_style, "#phaseStytch")
 print("stytch globals:", [g[0] for g in st_globals])
@@ -160,8 +152,28 @@ SHARED_TOPBAR_CSS = """
   }
   .navbtn:hover{background:var(--ink); color:var(--cream); border-color:var(--ink);}
   .navbtn svg{width:14px; height:14px;}
+  .speaker-view-btn{
+    appearance:none; cursor:pointer; display:inline-flex; align-items:center; gap:6px;
+    font-family:var(--mono); font-size:11px; letter-spacing:.04em; color:var(--ink-45);
+    background:transparent; border:1px solid var(--line); border-radius:20px; padding:5px 12px;
+  }
+  .speaker-view-btn:hover{color:var(--ink); border-color:var(--ink-45);}
+  .speaker-view-btn svg{width:13px; height:13px;}
   /* hide each deck's OWN topbar entirely — the shared one above replaces both */
   #phaseAgentIdentity > .topbar, #phaseStytch > .topbar{display:none !important;}
+  /* both phase wrappers hold a child .deck{height:100vh}, and neither wrapper
+     itself is taken out of normal flow -- so before showPhase() sets one to
+     display:none on the very first render, the page is briefly ~200vh tall
+     (both decks' full height stacked) and genuinely scrollable. If anything
+     in either deck's own setup code focuses an off-screen element during
+     that window, the browser scrolls to reveal it, and because
+     history.scrollRestoration defaults to "auto", that stray scroll gets
+     re-applied (and can compound further) on every subsequent reload --
+     confirmed live: scrollY grew by exactly one slide's 14px fade-in
+     transform on each hard refresh. Taking both wrappers out of flow
+     entirely removes the scrollable page height in the first place, so
+     there's never anywhere for a stray scroll to land. */
+  #phaseAgentIdentity, #phaseStytch{position:absolute; inset:0;}
 """
 
 full_css = GLOBAL_CSS + "\n" + SHARED_TOPBAR_CSS + "\n" + ai_scoped_css + "\n" + st_scoped_css
@@ -171,6 +183,10 @@ SHARED_TOPBAR_HTML = """
     <div class="brand"><a class="brand-home" href="../"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M15 18l-6-6 6-6"/></svg>Back to landing page</a></div>
     <div class="dots" id="sharedDots"></div>
     <div class="counter-nav">
+      <button class="speaker-view-btn" id="speakerViewBtn" title="Open speaker notes in a separate window (S)">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="14" rx="2"/><path d="M3 9h18"/></svg>
+        Speaker View
+      </button>
       <button class="navbtn" id="sharedPrevBtn" aria-label="Previous">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M15 18l-6-6 6-6"/></svg>
       </button>
@@ -211,29 +227,63 @@ COORDINATOR_JS = """
     return totalAI + (ST.currentVisibleNumber() - 1);
   }
 
+  // ---- speaker view: a separate window (notes.html) kept in sync with
+  // whichever slide/step is on screen here, the same way Keynote/PowerPoint
+  // presenter view works -- open once, share only this window/tab, and the
+  // notes window (on your other monitor, or your phone) advances itself.
+  let speakerWin = null;
+  function currentNoteKey(){
+    const root = activePhase === 'agentIdentity' ? elAI : elST;
+    const activeSlide = root.querySelector('.slide.active');
+    if (!activeSlide || !activeSlide.id) return null;
+    const step = activeSlide.querySelector('.step-nav-item.active');
+    // not every step-nav is the shared data-step convention -- the SDK
+    // deck's Reference Apps slide uses its own __stepNav (data-src/data-url,
+    // no data-step), so `.active` matches but dataset.step is undefined.
+    // Falling back to the plain slide id there is correct anyway: notes
+    // don't distinguish which reference app is showing, just the one slide.
+    return (step && step.dataset.step) ? (activeSlide.id + ':' + step.dataset.step) : activeSlide.id;
+  }
+  function pushNotesState(){
+    if (!speakerWin || speakerWin.closed) return;
+    speakerWin.postMessage({ type: 'ai-present-notes', key: currentNoteKey() }, '*');
+  }
+  function openSpeakerView(){
+    if (speakerWin && !speakerWin.closed) { speakerWin.focus(); return; }
+    speakerWin = window.open('notes.html', 'aiPresentSpeakerNotes', 'width=520,height=880');
+    // a message sent the instant a popup opens can get dropped before the
+    // browser finishes wiring up the cross-window channel (confirmed with
+    // this exact popup: notes.html's own on-load "ready" ping to us was
+    // silently lost every time, while the same postMessage call fired a
+    // second later worked fine) -- retrying a few times over ~2s is a cheap,
+    // robust fix that doesn't depend on catching that ping at all
+    [0, 150, 400, 800, 1500].forEach((delay) => setTimeout(pushNotesState, delay));
+  }
+  window.addEventListener('message', (e) => {
+    if (!e.data || e.source !== speakerWin) return;
+    // the speaker view is a full remote control, not just a display: arrow
+    // keys pressed there (it has its own focus, separate from this window)
+    // and outline-row clicks both drive this deck, which then reports its
+    // new state back through the normal syncTopbar() -> pushNotesState()
+    // path below -- single source of truth stays here, the notes window
+    // never predicts what the deck will do
+    if (e.data.type === 'ai-present-notes-ready') pushNotesState();
+    if (e.data.type === 'ai-present-nav') go(e.data.dir);
+    if (e.data.type === 'ai-present-jump') jumpTo(e.data.globalIdx);
+  });
+  document.getElementById('speakerViewBtn').onclick = openSpeakerView;
+
   function syncTopbar(){
     const gi = currentGlobalIndex();
     counterNowEl.textContent = String(gi + 1).padStart(2, '0');
     dotEls.forEach((d, i) => d.classList.toggle('active', i === gi));
+    pushNotesState();
   }
-
-  // each deck's speaker-notes panel/hint is appended straight to <body> by
-  // its own script (not inside either phase container), so they don't get
-  // hidden by toggling elAI/elST above -- both would otherwise stay visible
-  // and stack on top of each other regardless of which phase is showing
-  const aiNotesPanel = document.getElementById('agentIdentityNotesPanel');
-  const stNotesPanel = document.getElementById('stytchNotesPanel');
-  const aiNotesHint = document.getElementById('agentIdentityNotesHint');
-  const stNotesHint = document.getElementById('stytchNotesHint');
 
   function showPhase(phase){
     activePhase = phase;
     elAI.style.display = phase === 'agentIdentity' ? '' : 'none';
     elST.style.display = phase === 'stytch' ? '' : 'none';
-    if (aiNotesPanel) aiNotesPanel.style.display = phase === 'agentIdentity' ? '' : 'none';
-    if (stNotesPanel) stNotesPanel.style.display = phase === 'stytch' ? '' : 'none';
-    if (aiNotesHint) aiNotesHint.style.display = phase === 'agentIdentity' ? '' : 'none';
-    if (stNotesHint) stNotesHint.style.display = phase === 'stytch' ? '' : 'none';
     syncTopbar();
   }
 
@@ -276,13 +326,20 @@ COORDINATOR_JS = """
     if (e.key === 'ArrowRight') go(1);
     if (e.key === 'ArrowLeft') go(-1);
     if (e.key === 'r' || e.key === 'R') syncTopbar();
+    if (e.key === 's' || e.key === 'S') openSpeakerView();
   });
 
   showPhase('agentIdentity');
+  window.scrollTo(0, 0);
 })();
 """
 
 BOOTSTRAP_JS = """
+  // belt-and-suspenders alongside the position:absolute fix on the phase
+  // wrappers above: don't let the browser restore/compound a scroll
+  // position across reloads at all, in case anything anywhere ever nudges
+  // scroll again in the future
+  if ('scrollRestoration' in history) history.scrollRestoration = 'manual';
   if (!location.search.includes('present')) {
     location.replace(location.pathname + '?present=1' + location.hash);
   }

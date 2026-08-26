@@ -668,28 +668,6 @@
   .history-link:hover{background:rgba(23,22,27,.08); border-color:var(--ink-45);}
   .history-link span{transition:transform .2s ease;}
   .history-link:hover span{transform:translateX(2px);}
-
-  /* ---- presentation-mode speaker notes (only built when ?present=1) ---- */
-  .speaker-notes-panel{
-    position:fixed; left:0; right:0; bottom:0; z-index:500;
-    max-height:26vh; overflow-y:auto;
-    background:var(--ink); color:var(--cream);
-    padding:14px 64px; box-sizing:border-box;
-    font-family:var(--sans); font-size:13.5px; line-height:1.55;
-  }
-  .speaker-notes-label{
-    font-family:var(--mono); font-size:10.5px; letter-spacing:.08em;
-    text-transform:uppercase; color:rgba(255,255,255,.5); margin:0 0 6px;
-  }
-  .speaker-notes-body{margin:0; max-width:900px;}
-  .speaker-notes-body ul{margin:0; padding-left:18px;}
-  .speaker-notes-body li{margin:0 0 4px;}
-  .speaker-notes-hint{
-    position:fixed; right:16px; bottom:16px; z-index:501;
-    font-family:var(--mono); font-size:10.5px; color:var(--ink-45);
-    background:var(--cream); border:1px solid var(--line); border-radius:20px;
-    padding:5px 12px;
-  }
 </style>
 </head>
 <body>
@@ -979,7 +957,6 @@
       <div class="text-block">
         <p class="kicker">Thank You</p>
         <h1>Questions?</h1>
-        <p class="teaser">Two case studies, one throughline: identity has to prove itself — whether that's an AI agent earning the right to act, or an SDK earning a customer's confidence before they write a line of code.</p>
       </div>
     </section>
 
@@ -2100,98 +2077,6 @@
     };
   })();
 
-  // ---- presentation-mode speaker notes (only built when ?present=1) ----
-  if (PRESENT) {
-    const NOTES = {
-      slideHeroStytch: `<p>[~30 sec]</p><ul>
-        <li>Title card. Prebuilt SDK auth UI was supposed to be the fast path — no components to build — but adoption didn't match that promise.</li>
-      </ul>`,
-      slideProblemStytch: `<p>[~1.5 min]</p><ul>
-        <li>The SDK's whole pitch was fast auth. But <em>evaluating</em> it wasn't fast — customers had no way to know if it actually fit their product without integrating it first.</li>
-        <li>First read was a capability gap — closed API feature-parity gaps first. Customers still weren't adopting. The real blocker was never capability, it was proof/confidence.</li>
-        <li>This is the deck's throughline: feature parity ≠ confidence.</li>
-      </ul>`,
-      slidePersonaStytch: `<p>[~1 min]</p><ul>
-        <li>Two audiences: the Evaluator (a team deciding if Stytch fits, before writing code) and the Solutions Engineer (Stytch's own team, who used to hand-build one-off demos to answer exactly the Evaluator's question).</li>
-        <li>Don't spoil it yet, but unlike Owl Trade's two personas, the SE side isn't hypothetical — it pays off on the Impact slide.</li>
-      </ul>`,
-      demoSlide: `<p>[~30 sec]</p><ul>
-        <li>Customers kept asking the same concrete question: "what would this actually look like inside <em>my</em> product?" The closest thing Stytch had were example apps.</li>
-      </ul>`,
-      demoSelectSlide: `<p>[~1.5 min]</p><ul>
-        <li>Hello Socks / Survey Amp: real example apps built on the SDK. They help, but only show what the SDK looks like generically — not what it'd look like for a customer's own product, which is the actual question.</li>
-        <li>Click through one or both briefly — this is meant to land as "close, but not quite the answer."</li>
-      </ul>`,
-      slideSolution: `<p>[~1 min]</p><ul>
-        <li>The answer wasn't another demo — it was a tool: an interactive playground, live, before any code is written. This is the pivot into the deck's centerpiece.</li>
-      </ul>`,
-      'journeySlide:1': `<p>[~1.5 min] Step 1 — Explore Stytch's products</p><ul>
-        <li>Full product catalog as a button grid, not hidden behind a dropdown/search — deliberate, since customers evaluating Stytch often don't know the full catalog exists yet.</li>
-        <li>The live tool autoplays through several product chips on its own — let it play, nothing to click.</li>
-      </ul>`,
-      'journeySlide:2': `<p>[~1.5 min] Step 2 — Branding</p><ul>
-        <li>One flat panel of properties, not sections/tabs you already have to know to look in — styling questions kept breaking down over "where does this property even show up?"</li>
-        <li>Root cause: auditing the SDK's real config showed the mapping between the design system and the SDK's settings had drifted as things scaled — even the Stytch team couldn't always say what mapped to what. Fixing this meant refactoring the SDK's actual styling object, in close collaboration with engineering.</li>
-        <li>"See how we got here" link covers the dropdown-vs-grid and tabbed-vs-flat decisions — skipping the detour today for time, mention it's there.</li>
-      </ul>`,
-      'journeySlide:3': `<p>[~1.5 min] Step 3 — Try the real flow, not a screenshot</p><ul>
-        <li>Not a static preview — a fully working SDK instance. Customers click through the real sign-up/login flow (email → OTP → success) to judge brand fit AND actual behavior at once.</li>
-        <li>This step is fully scripted (auto-types email, auto-fills OTP, shows success) — just narrate over it.</li>
-      </ul>`,
-      'journeySlide:4': `<p>[~1 min] Step 4 — Shippable code</p><ul>
-        <li>View Code turns the live config into a real integration snippet the moment evaluation ends — "how do I get this into my product, quickly" is already answered, not a separate build step.</li>
-      </ul>`,
-      slideChallengesStytch: `<p>[~1.5 min]</p><ul>
-        <li>Not a roadmap project — started as a Hack Week idea, needed leadership buy-in to get fully productionized.</li>
-        <li>The smooth customization experience only worked because the SDK's actual styling config got refactored first — working closely with engineering, not just a UI layer on top of what existed.</li>
-      </ul>`,
-      slideImpact: `<p>[~1.5 min]</p><ul>
-        <li>No adoption/conversion numbers yet, but real validation: the Solutions Engineers whose one-off demos this replaced started using the Integration Builder themselves, on real customer and prospect calls.</li>
-        <li>Recap: fast/easy preview replacing the SE-demo workaround, View Code cutting time-to-value, customers now validating product fit/brand fit/real UX flows themselves instead of taking it on faith.</li>
-      </ul>`,
-      slideThankYou: `<p>[~1 min]</p><ul>
-        <li>Thank you — open it up to questions.</li>
-        <li>If useful, recap the throughline connecting both talks: identity has to prove itself, whether that's an agent earning the right to act, or an SDK earning a customer's confidence — show, don't tell, in both cases.</li>
-      </ul>`,
-    };
-
-    const notesPanel = document.createElement('div');
-    notesPanel.className = 'speaker-notes-panel';
-    notesPanel.id = 'stytchNotesPanel';
-    document.body.appendChild(notesPanel);
-    const notesHint = document.createElement('div');
-    notesHint.className = 'speaker-notes-hint';
-    notesHint.id = 'stytchNotesHint';
-    notesHint.textContent = 'N — toggle speaker notes';
-    document.body.appendChild(notesHint);
-
-    function currentNotesKey(){
-      const s = document.querySelector('.slide.active');
-      if (!s || !s.id) return null;
-      const step = s.querySelector('.step-nav-item.active');
-      return step ? (s.id + ':' + step.dataset.step) : s.id;
-    }
-    function updateSpeakerNotes(){
-      const key = currentNotesKey();
-      const html = key && NOTES[key];
-      notesPanel.innerHTML = html
-        ? '<p class="speaker-notes-label">Speaker Notes</p><div class="speaker-notes-body">' + html + '</div>'
-        : '';
-    }
-    new MutationObserver(updateSpeakerNotes).observe(
-      document.getElementById('deckStytch'),
-      { attributes:true, attributeFilter:['class'], subtree:true }
-    );
-    updateSpeakerNotes();
-
-    let notesVisible = true;
-    window.addEventListener('keydown', (e) => {
-      if (e.key === 'n' || e.key === 'N') {
-        notesVisible = !notesVisible;
-        notesPanel.style.display = notesVisible ? '' : 'none';
-      }
-    });
-  }
 
   // backward-compat for this deck's own (hidden, when merged) topbar
   // buttons, which reference `go` as a bare global via onclick="go(1)"
