@@ -375,7 +375,7 @@ COORDINATOR_JS = """
   window.addEventListener('keydown', (e) => {
     if (e.key === 'ArrowRight') go(1);
     if (e.key === 'ArrowLeft') go(-1);
-    if (e.key === 'r' || e.key === 'R') syncTopbar();
+    if (e.key === 'r' || e.key === 'R') jumpTo(0);
     if (e.key === 's' || e.key === 'S') openSpeakerView();
   });
 

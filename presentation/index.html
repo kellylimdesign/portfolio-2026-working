@@ -2507,9 +2507,10 @@
        an overlay nested inside one would only ever cover that slide's own
        box, not the true viewport (topbar included). One shell, two
        independent wizards (data-history-group="consent"/"agents" below) —
-       each auto-opens the first time "next" would carry someone past its
-       step (see go(1) / historySeenGroups in the script), and each stays
-       reachable afterward via its own "See how we got here" link. -->
+       each re-opens every time "next"/"prev" would carry someone past its
+       boundary step (see go(dir) in the script, and historyTriggerStep), and
+       each stays reachable manually too via its own "See how we got here"
+       link. -->
   <div class="history-overlay" id="historyOverlay">
     <div class="history-panel">
       <button class="history-close" id="historyClose" aria-label="Close"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M6 6l12 12M18 6L6 18"/></svg></button>
@@ -3451,7 +3452,7 @@
           <div class="substep-callout">
           <button class="substep-item active" data-substep="1"><span class="substep-item-marker"></span><span class="substep-item-body"><span class="substep-item-title">Grant the agent access to act on your behalf</span><span class="substep-item-desc">Once signed in, Alex sees exactly what ChatGPT is asking for and can allow or deny access before anything is connected.</span></span></button>
         </div>
-          <button class="history-link" onclick="window.__agentIdentityDeck.openHistoryOverlay('grant-access', false)">See how we got here <span aria-hidden="true">&rarr;</span></button>
+          <button class="history-link" onclick="window.__agentIdentityDeck.openHistoryOverlay('grant-access', {triggerStep: 3})">See how we got here <span aria-hidden="true">&rarr;</span></button>
         </div>
       </div>
       <div class="step-nav-item" data-step="4">
@@ -4093,7 +4094,7 @@
           <div class="substep-callout">
           <button class="substep-item active" data-substep="1"><span class="substep-item-marker"></span><span class="substep-item-body"><span class="substep-item-title">Owl Trade controls what the ask looks like, not just when it happens</span><span class="substep-item-desc">The consent screen ships with Twilio's default branding, but Owl Trade can drop in its own logo directly from the console — so approving an agent feels like part of their product, not a hand-off to someone else's.</span></span></button>
         </div>
-          <button class="history-link" onclick="window.__agentIdentityDeck.openHistoryOverlay('consent', false)">See how we got here <span aria-hidden="true">&rarr;</span></button>
+          <button class="history-link" onclick="window.__agentIdentityDeck.openHistoryOverlay('consent', {triggerStep: 2})">See how we got here <span aria-hidden="true">&rarr;</span></button>
         </div>
       </div>
       <div class="step-nav-item" data-step="3">
@@ -4102,7 +4103,7 @@
           <div class="substep-callout">
           <button class="substep-item active" data-substep="1"><span class="substep-item-marker"></span><span class="substep-item-body"><span class="substep-item-title">Easily view and manage every agent with access to your product</span><span class="substep-item-desc">No separate tooling needed. Owl Trade can view and adjust what any agent can do directly in the Twilio console, including what permissions an agent is allowed to ask a user for.</span></span></button>
         </div>
-          <button class="history-link" onclick="window.__agentIdentityDeck.openHistoryOverlay('agents', false)">See how we got here <span aria-hidden="true">&rarr;</span></button>
+          <button class="history-link" onclick="window.__agentIdentityDeck.openHistoryOverlay('agents', {triggerStep: 3})">See how we got here <span aria-hidden="true">&rarr;</span></button>
         </div>
       </div>
       <div class="step-nav-item" data-step="4">
@@ -4628,6 +4629,16 @@
         <li>What custom scopes they'd need to define</li>
         <li>What problem they'd want solved next</li>
       </ul>
+    </section>
+
+    <!-- present-only pause slide between the two case studies — gives a natural
+         place to stop for questions on Agent Identity specifically, before
+         moving on to the SDK case study. Hidden in the published deck. -->
+    <section class="slide layout-text present-only" id="slideQuestionsAgentIdentity">
+      <div class="text-block">
+        <p class="kicker">Before We Move On</p>
+        <h1>Questions?</h1>
+      </div>
     </section>
 
     <!-- 9. LIVE PROTOTYPE workspace — real HTML build of the Agent Identity console.
@@ -5979,14 +5990,24 @@
   // depth on Customize the Consent Screen) — historyGroup tracks which one
   // is currently open, and every function below operates scoped to it via
   // [data-history-group="<historyGroup>"] rather than a bare class query.
-  // historySeenGroups tracks the one-time auto-open per group independently
-  // (finishing the agents wizard shouldn't skip the consent one, or vice
-  // versa); historyPendingAdvance/-Step track whether + where the deferred
-  // "next" transition should land once the CURRENTLY open one closes.
-  // presentation mode now walks these same as the standalone deck: "next"
-  // auto-opens the first unseen wizard for the group it's leaving, then each
-  // wizard step is its own "next" press (see go(dir)'s overlay-active
-  // branch), landing back on the real next step once the wizard's done.
+  // in presentation mode, every crossing of a wizard's boundary re-opens it
+  // — walking backward into it after already seeing it isn't treated any
+  // differently than the first time, since a rehearsed presenter always
+  // wants it there. The published case study keeps its original "once per
+  // visit, forward only" behavior for a casually-browsing reader (see
+  // historySeenGroups below). historyTriggerStep is the step immediately
+  // BEFORE the wizard (e.g. 2 for the consent wizard, which sits between
+  // step 2 and step 3) — since a wizard's own step 1 always borders that
+  // step, and its last step always borders triggerStep+1 regardless of
+  // which direction it was entered from, closing forward always lands on
+  // triggerStep+1 and closing backward always lands on triggerStep. See
+  // go(dir)'s overlay-active branch and the forward/backward trigger checks
+  // below.
+  // published-site gate: each forward trigger only fires once per group,
+  // ever (not consulted at all in presentation mode — see the trigger
+  // checks below); there's no backward-trigger equivalent at all outside
+  // presentation mode, since that's a new capability this session added
+  // specifically for rehearsal, not something the published site ever had.
   const historySeenGroups = { agents:false, consent:false, 'grant-access':false };
   // one-time auto-demo of the consent-customize panel's scroll (see
   // updateHistoryStep) — its content genuinely overflows (scrollHeight >
@@ -5996,8 +6017,7 @@
   let consentPanelAutoScrollShown = false;
   let historyGroup = 'agents';
   let historyStep = 1;
-  let historyPendingAdvance = false;
-  let historyPendingAdvanceStep = null;
+  let historyTriggerStep = null;
   function historyGroupStage(){ return document.querySelector('.history-stage[data-history-group="' + historyGroup + '"]'); }
   function historyStepCount(){
     const stage = historyGroupStage();
@@ -6085,7 +6105,8 @@
     });
   }
   window.addEventListener('resize', () => { if (document.getElementById('historyOverlay').classList.contains('active')) fitHistoryChrome(); });
-  function openHistoryOverlay(group, pending, pendingStep){
+  function openHistoryOverlay(group, opts){
+    opts = opts || {};
     const overlay = document.getElementById('historyOverlay');
     if (!overlay) return;
     // whatever step/part was running its own scripted click-pulses behind
@@ -6105,15 +6126,21 @@
     historyGroup = group;
     document.querySelectorAll('.history-stage[data-history-group]').forEach(s => s.classList.toggle('active-group', s.dataset.historyGroup === group));
     document.querySelectorAll('.history-dots[data-history-group]').forEach(d => d.classList.toggle('active-group', d.dataset.historyGroup === group));
-    historyStep = 1;
-    historyPendingAdvance = !!pending;
-    historyPendingAdvanceStep = pendingStep || null;
+    historyTriggerStep = (opts.triggerStep != null) ? opts.triggerStep : null;
+    // historyGroup is already reassigned above, so historyStepCount() (which
+    // reads it via historyGroupStage()) correctly counts THIS group's steps
+    historyStep = opts.enterAtLastStep ? historyStepCount() : 1;
     updateHistoryStep();
     resetHistoryProtos();
     resetMockToggles();
     overlay.classList.add('active');
-    historySeenGroups[group] = true;
   }
+  // just hides the overlay — doesn't navigate anywhere on its own. The X
+  // button/backdrop/Escape all call this directly (a deliberate dismiss
+  // should leave you exactly on the slide/step you're already looking at,
+  // wizard just gone); go(dir)'s overlay-active branch calls this too, but
+  // handles moving to historyTriggerStep (+-1) itself, separately, only for
+  // an actual arrow press
   function closeHistoryOverlay(){
     const overlay = document.getElementById('historyOverlay');
     if (overlay) overlay.classList.remove('active');
@@ -6128,12 +6155,6 @@
       clearAgentsTabsAutoplay();
       clearAgentsClientsLinkAutoplay();
       mountLiveConsole(document.getElementById('s7ClientsSlot'), 'clients');
-    }
-    if (historyPendingAdvance) {
-      historyPendingAdvance = false;
-      const current = slides[idx];
-      if (current && (current.id === 'slideCustomerJourney' || current.id === 'slideEndUserJourney') && historyPendingAdvanceStep) selectStepContext(current, historyPendingAdvanceStep);
-      historyPendingAdvanceStep = null;
     }
   }
   function initHistoryOverlay(){
@@ -6477,6 +6498,12 @@
         };
       });
     });
+    // resetting to step 1 here is right for the published case study (a
+    // casual re-visit should read fresh), and harmless in presentation mode
+    // too — go(dir)'s boundary-crossing logic calls selectStepContext again
+    // immediately after render(), synchronously, to correct this to
+    // whichever specific step a "back" or "next" press should land on, so
+    // this default never has a chance to actually paint.
     selectStepContext(slide, 1);
   }
 
@@ -6721,7 +6748,7 @@
   // guesswork entirely. Returns a stop() that cancels whatever's pending
   // (a queued timer or a listening button) and hides any open callout, so
   // clearIdpAutoplay/clearClientsAutoplay can cleanly interrupt mid-sequence.
-  function runGatedSequence(steps, timerBag){
+  function runGatedSequence(steps, timerBag, resetFn){
     let cancelled = false;
     let pendingCleanup = null;
     let openCalloutEl = null;
@@ -6731,7 +6758,33 @@
       if (openCalloutEl) { openCalloutEl.classList.remove('show'); openCalloutEl = null; }
     }
     function run(i){
-      if (cancelled || i >= steps.length) return;
+      if (cancelled) return;
+      if (i >= steps.length) {
+        // presenting live: loop back to the start after a pause instead of
+        // ending on a static final state — useful if Q&A or a lingering
+        // audience question runs long. clearIdpAutoplay/clearClientsAutoplay/
+        // clearConsentAutoplay already call stop() the instant the presenter
+        // navigates away, so this can't keep looping in the background once
+        // they've moved on. Published case study doesn't loop — a reader
+        // controls their own replay by re-triggering the walkthrough.
+        if (PRESENT) {
+          const t = setTimeout(() => {
+            // the steps array only ever has *relative* actions (click this,
+            // scroll that) — replaying it from the top doesn't undo whatever
+            // tab/modal/scroll state the LAST pass left on screen (confirmed
+            // bug: looping restarted the callouts while the console was
+            // still sitting on a side modal from the end of the previous
+            // pass). resetFn puts the console back to its actual starting
+            // state first, same as the one-time reset each of these already
+            // does before its very first run.
+            if (resetFn) resetFn();
+            run(0);
+          }, 3200);
+          timerBag.push(t);
+          pendingCleanup = () => clearTimeout(t);
+        }
+        return;
+      }
       const s = steps[i];
       if (s.callout) {
         const el = typeof s.callout === 'string' ? document.getElementById(s.callout) : s.callout;
@@ -6740,16 +6793,26 @@
         openCalloutEl = el;
         const btn = el.querySelector('.mock-callout-next');
         if (!btn) { run(i + 1); return; }
+        let autoTimer = null;
         const handler = (e) => {
           e.stopPropagation();
           btn.removeEventListener('click', handler);
+          if (autoTimer) clearTimeout(autoTimer);
           el.classList.remove('show');
           openCalloutEl = null;
           pendingCleanup = null;
           run(i + 1);
         };
         btn.addEventListener('click', handler);
-        pendingCleanup = () => btn.removeEventListener('click', handler);
+        pendingCleanup = () => { btn.removeEventListener('click', handler); if (autoTimer) clearTimeout(autoTimer); };
+        // presenting live: auto-advance after a beat instead of waiting on a
+        // real click, so the whole scripted demo can run hands-free. The
+        // published case study still requires a real click here on purpose
+        // (see comment above runGatedSequence) — a self-paced reader needs
+        // to control their own timing; a presenter driving it live doesn't.
+        // Per-callout override (s.autoDelay) — Manage Agents' callouts carry
+        // more to read than step 1/2's, so they get longer than the default.
+        if (PRESENT) autoTimer = setTimeout(() => btn.click(), s.autoDelay || 3200);
       } else {
         s.fn();
         const t = setTimeout(() => run(i + 1), s.delay || 0);
@@ -6837,10 +6900,21 @@
       {delay:1300, fn: () => typeInto(nameInput, 'Owl Trade', 70)},
       {delay:1700, fn: () => typeInto(input, 'https://owltrade.com/logo.png', 40)},
       {delay:1800, fn: () => {}},
-      {callout:'consentPreviewCallout'},
-      {delay:400,  fn: () => clickWithPulse(saveBtn)},
+      // autoDelay: matches Manage Agents' dwell time (per Kelly, the shared
+      // 3200ms default reads as too fast) — and the save click right after
+      // it closes gets a real pause (1400ms, up from 400ms) first.
+      {callout:'consentPreviewCallout', autoDelay:8000},
+      {delay:1400, fn: () => clickWithPulse(saveBtn)},
     ];
-    consentAutoplayStop = runGatedSequence(steps, consentAutoplayTimers);
+    // undoes the modal-open + typed-in state the sequence above leaves
+    // behind, so looping back to step 0 starts from the same closed,
+    // untyped "Customize" summary view it did the very first time
+    const resetConsentProto = () => {
+      closeAllDrawers();
+      nameInput.value = ''; nameInput.dispatchEvent(new Event('input', {bubbles:true}));
+      input.value = ''; input.dispatchEvent(new Event('input', {bubbles:true}));
+    };
+    consentAutoplayStop = runGatedSequence(steps, consentAutoplayTimers, resetConsentProto);
   }
 
   // step 3 "Manage agents" — walks a client detail (scroll, edit, scroll,
@@ -6870,13 +6944,20 @@
     // four screens (Clients list, one client's detail, Identities list, one
     // identity's detail), waiting for a "Next" click on each callout instead
     // of guessing a reading time, matching step 1's pattern.
+    // autoDelay: presentation mode's auto-advance on these callouts
+    // specifically reads as too fast at the shared 3200ms default (per
+    // Kelly) — these carry more explanatory text than step 1/2's, so they
+    // get a longer beat before auto-advancing. Also, per Kelly: the very
+    // next click/scroll right after a callout closes used to fire almost
+    // immediately (400ms) — bumped to 1400ms so there's a moment to actually
+    // look at the screen the callout was just pointing at before it changes.
     const steps = [
       {delay:600,  fn: () => {}},
-      {callout:'clientsListCallout'},
-      {delay:400,  fn: () => click('.tw-clients-list .tw-client-link')},
+      {callout:'clientsListCallout', autoDelay:8000},
+      {delay:1400, fn: () => click('.tw-clients-list .tw-client-link')},
       {delay:600,  fn: () => {}},
-      {callout:'clientDetailCallout'},
-      {delay:400,  fn: () => scrollEl('.tw-content', 260)},
+      {callout:'clientDetailCallout', autoDelay:8000},
+      {delay:1400, fn: () => scrollEl('.tw-content', 260)},
       {delay:1800, fn: () => scrollEl('.tw-content', 0)},
       {delay:1600, fn: () => click('#cdEditBtn')},
       {delay:1800, fn: () => scrollEl('#editClientOverlay .tw-drawer-body', 160)},
@@ -6885,14 +6966,22 @@
       {delay:1600, fn: () => click('#twCrumbCur')},
       {delay:1600, fn: () => click('.tw-tab[data-tab="identities"]')},
       {delay:500,  fn: () => {}},
-      {callout:'identitiesListCallout'},
-      {delay:400,  fn: () => click('.tw-identities-list .tw-id-link')},
+      {callout:'identitiesListCallout', autoDelay:8000},
+      {delay:1400, fn: () => click('.tw-identities-list .tw-id-link')},
       {delay:1000, fn: () => {}},
-      {callout:'identityDetailCallout'},
-      {delay:400,  fn: () => click('.tw-idsub-tab[data-idsub="clients"]')},
+      {callout:'identityDetailCallout', autoDelay:8000},
+      {delay:1400, fn: () => click('.tw-idsub-tab[data-idsub="clients"]')},
       {delay:1700, fn: () => click('#idClientsRows .tw-idc-name')},
     ];
-    clientsAutoplayStop = runGatedSequence(steps, clientsAutoplayTimers);
+    // the sequence ends drilled two levels deep (an identity's own "Clients"
+    // sub-tab, reached via that identity's full-details view) — looping back
+    // to step 0 needs the console back on the plain top-level Clients list
+    // first, or the callouts restart on top of whatever detail view was last
+    // open. mountLiveConsole already closes drawers + resets detail views +
+    // clicks a tab in one call (same one closeHistoryOverlay uses to put the
+    // console back here), so it's the correct, already-proven reset for this.
+    const resetClientsProto = () => mountLiveConsole(document.getElementById('s7ClientsSlot'), 'clients');
+    clientsAutoplayStop = runGatedSequence(steps, clientsAutoplayTimers, resetClientsProto);
   }
 
   // "How We Got Here" (agents) step 1 — mounts the same live console into
@@ -7016,32 +7105,39 @@
       {delay:1200, fn: () => doCopy(copyBtns[1])},
       {delay:1200, fn: () => { doCopy(copyBtns[2]); twilioTab.classList.add('pulse'); }},
       {delay:600,  fn: () => {}},
-      {callout:'oktaToTwilioCallout'},
+      // autoDelay: matches Manage Agents' dwell time (per Kelly, the shared
+      // 3200ms default reads as too fast to actually read these) — and the
+      // action right after each callout closes gets a real pause (1400ms,
+      // up from 400-900ms) instead of firing almost immediately, so there's
+      // a moment to look at the screen before it changes again.
+      {callout:'oktaToTwilioCallout', autoDelay:8000},
       // switch to Twilio Console and mount the live prototype (Configurations
       // tab) — left live/interactive afterward rather than auto-resetting,
-      // since it's the real console now, not a timed screenshot demo. Slowed
-      // (400->900, 1200->1800) so the tab switch itself has time to register
-      // before the Configure click fires — it was reading as one instant jump
-      // straight to the open modal.
-      {delay:900,  fn: () => { twilioTab.classList.remove('pulse'); showClickPulseOnEl(twilioTab); switchTo('twilio'); mountLiveConsole(document.getElementById('idpTwilioSlot'), 'configurations'); }},
+      // since it's the real console now, not a timed screenshot demo.
+      {delay:1400, fn: () => { twilioTab.classList.remove('pulse'); showClickPulseOnEl(twilioTab); switchTo('twilio'); mountLiveConsole(document.getElementById('idpTwilioSlot'), 'configurations'); }},
       // open the real "Configure JWT Profile" side modal — pause on it before
       // saving so the callout can explain what it's for
       {delay:1800, fn: () => clickWithPulse(document.getElementById('jwtConfigureBtn'))},
       {delay:900,  fn: () => {}},
-      {callout:'jwtModalCallout'},
+      {callout:'jwtModalCallout', autoDelay:8000},
       // save so the JWT Configuration section on the page behind it appears
       // filled in — matches Okta values copied above, ending on the filled
       // state, not mid-modal or bouncing off to some other tab
-      {delay:400,  fn: () => clickWithPulse(document.getElementById('jwtModalSave'))},
+      {delay:1400, fn: () => clickWithPulse(document.getElementById('jwtModalSave'))},
       // then open the Upload public keys drawer for context, and slide the
       // "why upload, not paste" callout in from outside the browser-chrome
       // window — kept off the UI itself so it reads as commentary, not a
       // real console element
       {delay:1500, fn: () => clickWithPulse(document.getElementById('uploadKeysBtn'))},
       {delay:900,  fn: () => {}},
-      {callout:'uploadCallout'},
+      {callout:'uploadCallout', autoDelay:8000},
     ];
-    idpAutoplayStop = runGatedSequence(steps, idpAutoplayTimers);
+    // resetIdpProto alone only resets the tab/copy-button state inside
+    // #idpProto — it was only ever called once, before this sequence's
+    // first run, back when nothing could possibly be open yet. Looping ends
+    // with the live console's Upload-keys drawer open, so that needs an
+    // explicit close too now.
+    idpAutoplayStop = runGatedSequence(steps, idpAutoplayTimers, () => { closeAllDrawers(); resetIdpProto(scope); });
   }
 
   // step 4 · part 2 — Verify-wizard clickable prototype. States: create-blank ->
@@ -7254,22 +7350,28 @@
     // below, silently advancing the real step behind the open overlay
     const historyOverlayEl = document.getElementById('historyOverlay');
     if (historyOverlayEl && historyOverlayEl.classList.contains('active')) {
+      const current = slides[idx];
       if (dir === 1) {
         if (historyStep < historyStepCount()) {
           historyStep++;
           updateHistoryStep();
         } else {
-          // last step: close, then keep going — for an auto-triggered open
-          // closeHistoryOverlay() already lands on the right step itself;
-          // for a manually-opened one (no pending advance) it only closes,
-          // so re-enter go(1) to move the underlying page forward too
-          const wasPending = historyPendingAdvance;
+          // last step of the wizard borders historyTriggerStep+1 regardless
+          // of which direction it was entered from (see historyTriggerStep
+          // comment above) — close, then land there directly
           closeHistoryOverlay();
-          if (!wasPending) go(1);
+          if (current && historyTriggerStep != null) { selectStepContext(current, historyTriggerStep + 1); selectPart(current, 1); }
         }
-      } else if (dir === -1 && historyStep > 1) {
-        historyStep--;
-        updateHistoryStep();
+      } else if (dir === -1) {
+        if (historyStep > 1) {
+          historyStep--;
+          updateHistoryStep();
+        } else {
+          // first step borders historyTriggerStep itself — close, then land
+          // back there (its last part, matching normal backward-step convention)
+          closeHistoryOverlay();
+          if (current && historyTriggerStep != null) { selectStepContext(current, historyTriggerStep); selectPart(current, ctxPartCount(activeNavItem(current))); }
+        }
       }
       return;
     }
@@ -7283,26 +7385,47 @@
         if (substepIdx < partTotal) { selectPart(current, substepIdx + 1); return; }
         // leaving step 2 (consent screen) or step 3 (Manage agents) on the
         // Customer Journey slide, or step 3 (Grant Access) on the End User
-        // Journey slide — the first time only, pause on that step's "how we
-        // got here" overlay instead of advancing straight through;
-        // historySeenGroups[group] flips true once it's been shown, so every
-        // visit after that just advances normally
-        if (current.id === 'slideCustomerJourney' && curStep === 2 && !historySeenGroups.consent) {
-          openHistoryOverlay('consent', true, 3);
+        // Journey slide — pause on that step's "how we got here" wizard
+        // instead of advancing straight through. In presentation mode this
+        // fires every time; on the published site, only the first time per
+        // group (historySeenGroups), same as it always has.
+        if (current.id === 'slideCustomerJourney' && curStep === 2 && (PRESENT || !historySeenGroups.consent)) {
+          historySeenGroups.consent = true;
+          openHistoryOverlay('consent', { triggerStep: 2 });
           return;
         }
-        if (current.id === 'slideCustomerJourney' && curStep === 3 && !historySeenGroups.agents) {
-          openHistoryOverlay('agents', true, 4);
+        if (current.id === 'slideCustomerJourney' && curStep === 3 && (PRESENT || !historySeenGroups.agents)) {
+          historySeenGroups.agents = true;
+          openHistoryOverlay('agents', { triggerStep: 3 });
           return;
         }
-        if (current.id === 'slideEndUserJourney' && curStep === 3 && !historySeenGroups['grant-access']) {
-          openHistoryOverlay('grant-access', true, 4);
+        if (current.id === 'slideEndUserJourney' && curStep === 3 && (PRESENT || !historySeenGroups['grant-access'])) {
+          historySeenGroups['grant-access'] = true;
+          openHistoryOverlay('grant-access', { triggerStep: 3 });
           return;
         }
         // this step's parts are done — walk into the next step before leaving the slide
         if (curStep < stepNavItems.length) { selectStepContext(current, curStep + 1); return; }
       } else if (dir === -1) {
         if (substepIdx > 1) { selectPart(current, substepIdx - 1); return; }
+        // backward mirror of the forward triggers above — leaving curStep
+        // backward (about to land on curStep-1) re-opens the same wizard
+        // that sits between them, entering at its LAST step so back/forward
+        // walk the identical path in both directions. Presentation-mode
+        // only — the published site never showed the wizard on a backward
+        // pass at all, and this isn't the place to introduce that for it.
+        if (PRESENT && current.id === 'slideCustomerJourney' && curStep === 3) {
+          openHistoryOverlay('consent', { triggerStep: 2, enterAtLastStep: true });
+          return;
+        }
+        if (PRESENT && current.id === 'slideCustomerJourney' && curStep === 4) {
+          openHistoryOverlay('agents', { triggerStep: 3, enterAtLastStep: true });
+          return;
+        }
+        if (PRESENT && current.id === 'slideEndUserJourney' && curStep === 4) {
+          openHistoryOverlay('grant-access', { triggerStep: 3, enterAtLastStep: true });
+          return;
+        }
         // walking back — land on the previous step's last part, not its first
         if (curStep > 1) {
           selectStepContext(current, curStep - 1);
@@ -7341,6 +7464,20 @@
     }
     idx = nextIdx;
     render();
+    // restartStepsNext() (inside render(), above) always defaults a
+    // step-nav slide to step 1 — correct for a forward arrival, but in
+    // presentation mode, arriving via "back" should land on its LAST step
+    // instead, exactly where a forward press from here would have left it.
+    // Presentation-mode only: the published site has always reset to step 1
+    // on a backward arrival too, same as forward — not changing that here.
+    if (PRESENT && dir === -1) {
+      const landed = slides[idx];
+      const landedStepNavItems = landed.querySelectorAll('.step-nav .step-nav-item');
+      if (landedStepNavItems.length) {
+        selectStepContext(landed, landedStepNavItems.length);
+        selectPart(landed, ctxPartCount(activeNavItem(landed)));
+      }
+    }
   }
 
   function updateCarouselArrows(wrap){
@@ -7385,8 +7522,8 @@
     if (!window.__aiPresentMerged) {
       if (e.key === 'ArrowRight') go(1);
       if (e.key === 'ArrowLeft') go(-1);
+      if (e.key === 'r' || e.key === 'R') { idx = 0; consentPanelAutoScrollShown = false; render(); }
     }
-    if (e.key === 'r' || e.key === 'R') { idx = 0; historySeenGroups.agents = false; historySeenGroups.consent = false; historySeenGroups['grant-access'] = false; consentPanelAutoScrollShown = false; render(); }
   });
 
   // ---- live console prototype (slide 9) ----
@@ -7876,11 +8013,23 @@
   // -1 so the very first render() (idx already 0) still counts as a real
   // "entered slide 0" transition — see the __onActivate check below
   let prevIdx = -1;
-  // set the first time pressing next from the Journey slide's step 4 opens
-  // "How We Got Here" instead of advancing — see go(dir). Presentation mode
-  // now walks this detour too (each wizard step is its own "next"), same as
-  // Trust's equivalent wizards — see historySeenGroups there.
+  // the wizard sits exactly at the boundary between Journey step 4 and
+  // Challenges. In presentation mode, pressing next from step 4 always
+  // re-opens it (every visit, not just the first) and pressing back from
+  // Challenges always re-opens it too, at its LAST step, so back/forward
+  // walk the identical path in both directions — a rehearsed presenter
+  // always wants it there. The published site keeps its original "once
+  // ever, forward only" behavior (journeyHistoryAutoOpened) for a casually
+  // browsing reader; it never had a backward-trigger at all, so that stays
+  // presentation-only rather than adding new published-site behavior.
+  // historyBoundaryMode marks an open as "this is that boundary crossing"
+  // (vs. the manual "See how we got here" link, which is always visible on
+  // Journey regardless of which step is selected, so it can't assume
+  // closing should jump anywhere) — see openHistoryOverlay/historyGo below.
+  let historyBoundaryMode = false;
   let journeyHistoryAutoOpened = false;
+  const slideChallengesStytchEl = document.getElementById('slideChallengesStytch');
+  const journeySlideIdx = slides.indexOf(document.getElementById('journeySlide'));
   const dotsEl = document.getElementById('stytchDots');
   slides.forEach((s, i) => {
     const d = document.createElement('div');
@@ -7919,6 +8068,17 @@
     prevIdx = idx;
   }
   function go(dir){
+    // leaving Challenges backward always re-opens the wizard at its LAST
+    // step, mirroring the forward trigger in onLastNext below (this slide
+    // has no __stepNav of its own, so this can't live in that interception
+    // further down — checked first, before anything else). Presentation
+    // mode only — see the comment above historyBoundaryMode.
+    if (PRESENT && dir === -1 && slides[idx] === slideChallengesStytchEl) {
+      idx = journeySlideIdx;
+      render();
+      openHistoryOverlay({ boundary: true, enterAtLastStep: true });
+      return;
+    }
     // the "how we got here" wizard, while open, owns the deck's own
     // next/prev controls (on-screen buttons and arrow keys alike) — same
     // convention as the __stepNav interception below, one level up
@@ -8145,17 +8305,37 @@
   }
   function historyGo(dir){
     const nextStep = historyStep + dir;
-    // pressing next past the last step closes the wizard and drops back to
-    // the Journey slide underneath, rather than just sitting disabled
-    if (dir === 1 && nextStep > historyStepCount()) { closeHistoryOverlay(); return; }
+    // pressing next past the last step closes the wizard — if this was the
+    // boundary crossing (not the always-visible manual link, which could've
+    // been clicked from any of Journey's 4 steps and has nowhere specific
+    // to jump to), land directly on Challenges: the wizard's last step
+    // always borders it, regardless of which direction it was entered from.
+    if (dir === 1 && nextStep > historyStepCount()) {
+      closeHistoryOverlay();
+      if (historyBoundaryMode) { idx = journeySlideIdx + 1; render(); }
+      return;
+    }
+    // pressing back past the first step closes the wizard — symmetric with
+    // forward: its first step always borders Journey step 4. Journey's own
+    // currentStepIdx is untouched by any of this (it's still 3 from
+    // whichever entry triggered the wizard), so just closing already shows
+    // step 4 correctly if the boundary-mode idx jump already happened
+    // (backward-entry case); the forward-entry case never left Journey at
+    // all, so there's nothing further to do there either.
+    if (dir === -1 && nextStep < 1) { closeHistoryOverlay(); return; }
     if (nextStep < 1 || nextStep > historyStepCount()) return;
     historyStep = nextStep;
     updateHistoryStep();
   }
-  function openHistoryOverlay(){
+  function openHistoryOverlay(opts){
+    opts = opts || {};
     const overlay = document.getElementById('stytchHistoryOverlay');
     if (!overlay) return;
-    historyStep = 1;
+    historyBoundaryMode = !!opts.boundary;
+    // mark it seen regardless of how it was opened, so a manual link click
+    // on the published site also stops onLastNext from firing again later
+    journeyHistoryAutoOpened = true;
+    historyStep = opts.enterAtLastStep ? historyStepCount() : 1;
     // .active has to be set BEFORE updateHistoryStep() runs, not after —
     // updateHistoryStep() is what kicks off runStep1Sequence/
     // startDropdownMock, and their very first "is the overlay actually
@@ -8463,18 +8643,32 @@
 
     // step 4 — default to the configuration view (matching every other
     // step), then play a scripted click on View Code so the viewer sees the
-    // actual interaction happen instead of landing straight on the result
+    // actual interaction happen instead of landing straight on the result.
+    // #skViewCodeBtn is a toggle (View Code <-> Customize, see tool.js
+    // setCodeMode) — clicking it again after a pause returns to the config
+    // view, then the whole cycle repeats, matching step 1/2's own
+    // continuous demos instead of leaving View Code open and static forever.
     let step4DemoTimer = null;
     function stopStep4Demo(){
       if (step4DemoTimer) { clearTimeout(step4DemoTimer); step4DemoTimer = null; }
     }
     function startStep4Demo(){
       stopStep4Demo();
-      step4DemoTimer = setTimeout(() => {
+      function showCode(){
+        step4DemoTimer = setTimeout(() => {
+          if (!journeySlide.classList.contains('active')) return;
+          const viewCodeBtn = journeyToolMount.querySelector('#skViewCodeBtn');
+          clickWithPulse(viewCodeBtn, 350);
+          step4DemoTimer = setTimeout(hideCode, 2600);
+        }, 1100);
+      }
+      function hideCode(){
         if (!journeySlide.classList.contains('active')) return;
         const viewCodeBtn = journeyToolMount.querySelector('#skViewCodeBtn');
         clickWithPulse(viewCodeBtn, 350);
-      }, 1100);
+        step4DemoTimer = setTimeout(showCode, 1600);
+      }
+      showCode();
     }
 
     // step 3 — a real, hand-driven "Try the real flow" carousel (Google
@@ -8552,7 +8746,19 @@
                 <p class="sk3-otp-verifying">Verifying passcode&hellip;</p>
                 <div class="sk3-loading-bar"><div class="sk3-loading-bar-fill"></div></div>`;
             }
-            step3Timeouts.push(setTimeout(() => goToStep3Screen(formArea, 2), 950));
+            step3Timeouts.push(setTimeout(() => {
+              goToStep3Screen(formArea, 2);
+              // loop back to the start after a pause to read "Success!",
+              // instead of sitting on that static screen forever — matches
+              // step 1/2's own continuous demos. #sk3ResetBtn already does
+              // the full reset (clear fields, back to screen 1, restart the
+              // email-typing animation), so just click it rather than
+              // duplicating that logic here.
+              step3Timeouts.push(setTimeout(() => {
+                const resetBtn = formArea.querySelector('#sk3ResetBtn');
+                if (resetBtn) resetBtn.click();
+              }, 2800));
+            }, 950));
           }, 300));
         }
       }, 140);
@@ -8760,9 +8966,10 @@
       getCurrentIndex: () => currentStepIdx,
       goToIndex: selectStep,
       onLastNext: () => {
-        if (journeyHistoryAutoOpened) return false;
-        journeyHistoryAutoOpened = true;
-        openHistoryOverlay();
+        // presentation mode: always re-opens, every visit. Published site:
+        // only the first time ever (original behavior, unchanged).
+        if (!PRESENT && journeyHistoryAutoOpened) return false;
+        openHistoryOverlay({ boundary: true });
         return true;
       },
     };
@@ -8959,7 +9166,7 @@
   window.addEventListener('keydown', (e) => {
     if (e.key === 'ArrowRight') go(1);
     if (e.key === 'ArrowLeft') go(-1);
-    if (e.key === 'r' || e.key === 'R') syncTopbar();
+    if (e.key === 'r' || e.key === 'R') jumpTo(0);
     if (e.key === 's' || e.key === 'S') openSpeakerView();
   });
 

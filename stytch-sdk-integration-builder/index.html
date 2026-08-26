@@ -1167,11 +1167,23 @@
   // -1 so the very first render() (idx already 0) still counts as a real
   // "entered slide 0" transition — see the __onActivate check below
   let prevIdx = -1;
-  // set the first time pressing next from the Journey slide's step 4 opens
-  // "How We Got Here" instead of advancing — see go(dir). Presentation mode
-  // now walks this detour too (each wizard step is its own "next"), same as
-  // Trust's equivalent wizards — see historySeenGroups there.
+  // the wizard sits exactly at the boundary between Journey step 4 and
+  // Challenges. In presentation mode, pressing next from step 4 always
+  // re-opens it (every visit, not just the first) and pressing back from
+  // Challenges always re-opens it too, at its LAST step, so back/forward
+  // walk the identical path in both directions — a rehearsed presenter
+  // always wants it there. The published site keeps its original "once
+  // ever, forward only" behavior (journeyHistoryAutoOpened) for a casually
+  // browsing reader; it never had a backward-trigger at all, so that stays
+  // presentation-only rather than adding new published-site behavior.
+  // historyBoundaryMode marks an open as "this is that boundary crossing"
+  // (vs. the manual "See how we got here" link, which is always visible on
+  // Journey regardless of which step is selected, so it can't assume
+  // closing should jump anywhere) — see openHistoryOverlay/historyGo below.
+  let historyBoundaryMode = false;
   let journeyHistoryAutoOpened = false;
+  const slideChallengesStytchEl = document.getElementById('slideChallengesStytch');
+  const journeySlideIdx = slides.indexOf(document.getElementById('journeySlide'));
   const dotsEl = document.getElementById('stytchDots');
   slides.forEach((s, i) => {
     const d = document.createElement('div');
@@ -1210,6 +1222,17 @@
     prevIdx = idx;
   }
   function go(dir){
+    // leaving Challenges backward always re-opens the wizard at its LAST
+    // step, mirroring the forward trigger in onLastNext below (this slide
+    // has no __stepNav of its own, so this can't live in that interception
+    // further down — checked first, before anything else). Presentation
+    // mode only — see the comment above historyBoundaryMode.
+    if (PRESENT && dir === -1 && slides[idx] === slideChallengesStytchEl) {
+      idx = journeySlideIdx;
+      render();
+      openHistoryOverlay({ boundary: true, enterAtLastStep: true });
+      return;
+    }
     // the "how we got here" wizard, while open, owns the deck's own
     // next/prev controls (on-screen buttons and arrow keys alike) — same
     // convention as the __stepNav interception below, one level up
@@ -1436,17 +1459,37 @@
   }
   function historyGo(dir){
     const nextStep = historyStep + dir;
-    // pressing next past the last step closes the wizard and drops back to
-    // the Journey slide underneath, rather than just sitting disabled
-    if (dir === 1 && nextStep > historyStepCount()) { closeHistoryOverlay(); return; }
+    // pressing next past the last step closes the wizard — if this was the
+    // boundary crossing (not the always-visible manual link, which could've
+    // been clicked from any of Journey's 4 steps and has nowhere specific
+    // to jump to), land directly on Challenges: the wizard's last step
+    // always borders it, regardless of which direction it was entered from.
+    if (dir === 1 && nextStep > historyStepCount()) {
+      closeHistoryOverlay();
+      if (historyBoundaryMode) { idx = journeySlideIdx + 1; render(); }
+      return;
+    }
+    // pressing back past the first step closes the wizard — symmetric with
+    // forward: its first step always borders Journey step 4. Journey's own
+    // currentStepIdx is untouched by any of this (it's still 3 from
+    // whichever entry triggered the wizard), so just closing already shows
+    // step 4 correctly if the boundary-mode idx jump already happened
+    // (backward-entry case); the forward-entry case never left Journey at
+    // all, so there's nothing further to do there either.
+    if (dir === -1 && nextStep < 1) { closeHistoryOverlay(); return; }
     if (nextStep < 1 || nextStep > historyStepCount()) return;
     historyStep = nextStep;
     updateHistoryStep();
   }
-  function openHistoryOverlay(){
+  function openHistoryOverlay(opts){
+    opts = opts || {};
     const overlay = document.getElementById('stytchHistoryOverlay');
     if (!overlay) return;
-    historyStep = 1;
+    historyBoundaryMode = !!opts.boundary;
+    // mark it seen regardless of how it was opened, so a manual link click
+    // on the published site also stops onLastNext from firing again later
+    journeyHistoryAutoOpened = true;
+    historyStep = opts.enterAtLastStep ? historyStepCount() : 1;
     // .active has to be set BEFORE updateHistoryStep() runs, not after —
     // updateHistoryStep() is what kicks off runStep1Sequence/
     // startDropdownMock, and their very first "is the overlay actually
@@ -1754,18 +1797,32 @@
 
     // step 4 — default to the configuration view (matching every other
     // step), then play a scripted click on View Code so the viewer sees the
-    // actual interaction happen instead of landing straight on the result
+    // actual interaction happen instead of landing straight on the result.
+    // #skViewCodeBtn is a toggle (View Code <-> Customize, see tool.js
+    // setCodeMode) — clicking it again after a pause returns to the config
+    // view, then the whole cycle repeats, matching step 1/2's own
+    // continuous demos instead of leaving View Code open and static forever.
     let step4DemoTimer = null;
     function stopStep4Demo(){
       if (step4DemoTimer) { clearTimeout(step4DemoTimer); step4DemoTimer = null; }
     }
     function startStep4Demo(){
       stopStep4Demo();
-      step4DemoTimer = setTimeout(() => {
+      function showCode(){
+        step4DemoTimer = setTimeout(() => {
+          if (!journeySlide.classList.contains('active')) return;
+          const viewCodeBtn = journeyToolMount.querySelector('#skViewCodeBtn');
+          clickWithPulse(viewCodeBtn, 350);
+          step4DemoTimer = setTimeout(hideCode, 2600);
+        }, 1100);
+      }
+      function hideCode(){
         if (!journeySlide.classList.contains('active')) return;
         const viewCodeBtn = journeyToolMount.querySelector('#skViewCodeBtn');
         clickWithPulse(viewCodeBtn, 350);
-      }, 1100);
+        step4DemoTimer = setTimeout(showCode, 1600);
+      }
+      showCode();
     }
 
     // step 3 — a real, hand-driven "Try the real flow" carousel (Google
@@ -1843,7 +1900,19 @@
                 <p class="sk3-otp-verifying">Verifying passcode&hellip;</p>
                 <div class="sk3-loading-bar"><div class="sk3-loading-bar-fill"></div></div>`;
             }
-            step3Timeouts.push(setTimeout(() => goToStep3Screen(formArea, 2), 950));
+            step3Timeouts.push(setTimeout(() => {
+              goToStep3Screen(formArea, 2);
+              // loop back to the start after a pause to read "Success!",
+              // instead of sitting on that static screen forever — matches
+              // step 1/2's own continuous demos. #sk3ResetBtn already does
+              // the full reset (clear fields, back to screen 1, restart the
+              // email-typing animation), so just click it rather than
+              // duplicating that logic here.
+              step3Timeouts.push(setTimeout(() => {
+                const resetBtn = formArea.querySelector('#sk3ResetBtn');
+                if (resetBtn) resetBtn.click();
+              }, 2800));
+            }, 950));
           }, 300));
         }
       }, 140);
@@ -2051,9 +2120,10 @@
       getCurrentIndex: () => currentStepIdx,
       goToIndex: selectStep,
       onLastNext: () => {
-        if (journeyHistoryAutoOpened) return false;
-        journeyHistoryAutoOpened = true;
-        openHistoryOverlay();
+        // presentation mode: always re-opens, every visit. Published site:
+        // only the first time ever (original behavior, unchanged).
+        if (!PRESENT && journeyHistoryAutoOpened) return false;
+        openHistoryOverlay({ boundary: true });
         return true;
       },
     };
