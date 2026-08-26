@@ -60,19 +60,21 @@ DECK = [
     dict(key="slideEndUserJourney-3", num="07", section="Building Trust in the Age of AI", title="The End User Journey", step="Step 3 — Grant Access", time="1.5 min", notes=[
         'Now that Alex has proved he owns his Owl Trade account, he has to grant ChatGPT access.',
         'Alex sees exactly what ChatGPT is asking for and can allow/deny before anything connects.<br>',
-        "This consent experience is fully powered by Twilio agent identity. ChatGPT will get the ability to verify Alex's profile information, verify his identity, and take action on his behalf.",
+        "So Alex would see that ChatGPT is asking for permission to verify Alex's profile information, verify his identity, and take action on his behalf.",
+        'This consent experience is fully powered by Twilio agent identity.&nbsp;',
     
     ]),
     dict(key="wizard-grant-access-1", num="07", section="Building Trust in the Age of AI", title="The End User Journey", step="Wizard — Grant Access: how we got here (1/2)", time="1 min", notes=[
         'Quick aside on how we designed this consent screen: the big things we iterated on were how granular to make the consent request and how we might present that info.&nbsp;',
         'Do we go very simple, and only show one blanket ask for permission to connect the agent to the app? This felt like not enough information for a user, given granting consent means giving access to both your account info but also taking actions on your behalf.',
-        'Once we decided it was important to show each permission specifically, how do we then explain what each of these scopes mean? Do we hide descriptions, which is what the middle two options show, or should we try to group permissions together based on the specific action, in this case viewing info vs. performing actions?',
+        'Once we decided it was important to show each permission specifically, how do we then explain what each of these scopes mean? Do we hide descriptions, which is what the middle two options show, with a goal of trying to reduce clutter?',
+        'Or should we try to group permissions together based on the specific action, in this case viewing info vs. performing actions as you can see in the last option',
     
     ]),
     dict(key="wizard-grant-access-2", num="07", section="Building Trust in the Age of AI", title="The End User Journey", step="Wizard — Grant Access: how we got here (2/2)", time="30 sec", notes=[
         'We decided that given the permissions we are offering with the initial launch, which are all relatively straightforward, additional descriptions felt like overkill and cluttered the screen.',
         'The list was short enough that hiding any of it behind an expand or hover just added friction.',
-        "And trying to split up permissions into groupings also didn't have a clean divide.&nbsp;",
+        "And trying to split up permissions into groupings also didn't have a clean divide and didn't actually make sense in this case.",
         "Plus granting consent here actually is similar to a pattern a lot of end users would be familiar with -- social login. For example, if you log into a platform using your Google account, you'd see a very similar experience asking to give permission to your account info. So we wanted to leverage familiar mental models here that end users already trust.",
     
     ]),
@@ -81,24 +83,26 @@ DECK = [
         'Once granted, ChatGPT can now act autonomously — watching futures, deciding when to make trades, and following through on those trades — without Alex having to manually do so himself.',
         'So for example, if Alex wants to check on any price changes with orange juice futures, he can message into ChatGPT. ChatGPT will connect to Owl Trade to show the recent price trends.',
         'He would be able to ask ChatGPT to monitor any price dips, all within his authenticated Owl Trade account through this agent interface.',
+        'And so all of this is now possible because Alex was able to connect ChatGPT to OwlTrade.',
     
     ]),
     dict(key="slideOneConsole", num="08", section="Building Trust in the Age of AI", title="One Console, Every Setting", time="30 sec", notes=[
         'That completes the end user journey.',
         'Now for the "Builder" journey -- in this case Owl Trade\'s journey.',
         'Owl Trade needs a way to configure all the mechanisms behind the end user journey we just saw.&nbsp;',
-        'Today, Twilio has a console experience where customers are able to configure and manage products. Configuring agent identity needed to fit into this experience.',
+        "Today, Twilio has a console experience where customers are able to configure and manage existing products. Configuring agent identity needed to fit into this experience. We weren't going to build an entirely new console or experience just for this product.&nbsp;",
         'At a high level, there are four main steps for a customer to get agent identity set up.',
         'Verify identity, customize consent, manage agents, configure high-risk approvals',
-        "All of these need to live side by side to Twilio's existing products and point solutions in the console.",
+        "All of these need to live side by side to Twilio's existing products and point solutions in the console. And so that context is to set up the overall existing system that we were designing into.",
     
     ]),
     dict(key="slideCustomerJourney-1", num="09", section="Building Trust in the Age of AI", title="The Customer Journey", step="Step 1 — Connect, Don't Rebuild", time="1.5 min", notes=[
         'Step 1 is verifying identity.',
         "Most customers already have their own auth system. For example, let's pretend Owl Trade uses Okta. Twilio doesn't need to replace Okta, which would require an entire migration&nbsp; — we just need to be able to&nbsp;validate the user credentials that Okta is already managing for Owl Trade.",
         'Very simply put, a customer needs to pull certain values from their identity provider (Okta), and then have a way to import them into Twilio.',
-        'Twilio can access Owl Trade\'s users and identity credentials once we have these values, which matches up with the "login in to Owl Trade" step from the end user journey.',
-        'Before agent auth can be powered, Twilio first needs to be able to verify a specific user owns their account.',
+        'So before agent auth can be powered, Twilio first needs to be able to verify a specific user owns the account that they are connecting to.',
+        'And we can do this by accessing Owl Trade\'s users and identity credentials once we have these values saved into the Console, which matches up with the "login in to Owl Trade" step from the end user journey.',
+        "And so here you can see how an admin might go through this flow. They'd start in Okta, copy over the identity values that are relevant into Twilio. And once they have saved all those values, Twilio is able to verify end user identity.",
     
     ]),
     dict(key="slideCustomerJourney-2", num="09", section="Building Trust in the Age of AI", title="The Customer Journey", step="Step 2 — Customize the consent screen", time="1.5 min", notes=[
@@ -110,22 +114,25 @@ DECK = [
     ]),
     dict(key="wizard-consent-1", num="09", section="Building Trust in the Age of AI", title="The Customer Journey", step="Wizard — Consent screen: how we got here (1/2)", time="30 sec", notes=[
         'How did we decide on what customizations to offer?',
+        "I kind of called out already that being able to make this hosted screen feel native to the customer's product is really important. And that could mean a wide variety in levels of customizations.",
         'We explored an original version that let customers more fully brand the consent screen, including changing logo, colors, and fonts.',
         'This is more in line with what we expect to build with a full hosted login experience in the future.',
-        "However, given the tight timelines and scope, and that we are actively working on building out a fully hosted login experience, it didn't make sense to try to design a customization experience right now for just the consent screen.",
+        "However, given the tight timelines and scope, and that we are actively working on building out a fully hosted login experience that extends beyond just the agent consent screen, it didn't make sense to try to design a customization experience right now for just the consent screen.",
         'We want to make sure we are thinking about that experience wholistically.',
-        'Designing color pickers would also require a new design system element.',
+        'Designing a more fully built out customization experience would also mean working closely with the design systems team to introduce new components and new patterns, such as these color pickers.',
     
     ]),
     dict(key="wizard-consent-2", num="09", section="Building Trust in the Age of AI", title="The Customer Journey", step="Wizard — Consent screen: how we got here (2/2)", time="30 sec", notes=[
         "We narrowed down to what brand elements are absolutely essential, and the only element that Twilio can't replicate is a logo.",
-        'Things like Color/copy/font all need accessibility guardrails which are better solved again once this is absorbed into the full hosted-login flow',
+        'Things like Color/copy/font all need accessibility guardrails, will extend beyond just this screen to other parts of a hosted login UI, and would require more work with the design systems team, we decided are better solved again once this is absorbed into the full hosted-login flow',
+        "The one new pattern we did push on to include was this live preview. And so even though we are not offering a ton of UI customizations right now, we'd heard feedback in the past with pre-built UI that it can be hard to know where customizations will show up. And so we really wanted to make sure customers had an easy way to preview changes they were making live.",
     
     ]),
     dict(key="slideCustomerJourney-3", num="09", section="Building Trust in the Age of AI", title="The Customer Journey", step="Step 3 — Manage agents", time="2 min", notes=[
-        'Once agent identity is configured, customers need a way to monitor what agents have been connected to their product and how users are engaging.',
+        'So now going back to the console experience, once agent identity is configured, customers need a way to monitor what agents have been connected to their product and how users are engaging.',
         'For example, Owl Trade might want to see all the agents Alex has granted access to his account.',
         "Owl Trade views/adjusts every agent's access directly in console — no separate tooling needed.",
+        "And so this is really important -- if customers want to be able to fully use agent identity, they're not going to want to have to build their own internal tooling to monitor what happens after it's set up.",
         '<strong>Clients</strong>&nbsp;here are which agents are connected and what permissions they have.',
         'Customers can view information associated with the agents, and revoke access for <em>all</em> users at once by deleting an agent.',
         '<strong>Identities</strong>&nbsp;here are the users of your product.',
@@ -135,6 +142,7 @@ DECK = [
     dict(key="wizard-agents-1", num="09", section="Building Trust in the Age of AI", title="The Customer Journey", step="Wizard — Manage agents: how we got here (1/4)", time="30 sec", notes=[
         "There's quite a bit involved when looking at the clients and identities management. So how did we land on the final designs?",
         "In the console, we use terms more developer facing terms Clients and Identities. For the purposes of walking through these iterations, I'll reference agents which are the clients and users which are the identities.",
+        'When we first started designing this we looked at patterns that existed in the Console. I had mentioned we were not building a new dashboard, and so there was a design system that we were following.',
         "Following existing console patterns meant that we'd show Agents and users as table views inside Agent Identity. This was the standard pattern for similar management workflows everywhere else in the Console.",
         'But this would also mean that there was no easy way to see the relationship between the two.',
         "<b>Live demo — let the Identities tab click autoplay, don't click ahead of it.</b>",
@@ -153,11 +161,12 @@ DECK = [
         "So we decided: maybe it's worth breaking from traditional patterns to link between agents and users in a more dedicated way.",
         "While this would change the overall way you navigate in the console between these concepts, we still found a way to stay within patterns (leveraging how CTA's are placed) overall.",
         "From a user, an Authorized Clients tab lists every agent authorized to act on their behalf, linking straight to that agent's full details.",
+        "So in the Owl Trade Example, I have a user Alex. I want to see all the agents that he is specifically using. I can navigate to Alex's user details page, and then see his dedicated list of authorized agents.",
         '<b>Live demo — same live console pattern as step 1.</b>',
     
     ]),
     dict(key="wizard-agents-4", num="09", section="Building Trust in the Age of AI", title="The Customer Journey", step="Wizard — Manage agents: how we got here (4/4)", time="30 sec", notes=[
-        "That user → agent direction I just showed we were able to ship. However, the reverse direction, Agent → users didn't.",
+        "That user → agent direction I just showed we were able to ship. However, the reverse direction, starting with an agent and being able to see all the users who have authorized that agent didn't.",
         'Viewing every user authorized on an agent needs its own search endpoint — a bigger lift than what was required to view all agents tied to a specific user, so it got cut from scope.',
         'But since the pattern already exists on the user --&gt; agent side, adding this later once we have that endpoint is straightforward.',
         'This mock is speculative — badged "future state, not yet built."',
@@ -167,20 +176,21 @@ DECK = [
         'Now closing the loop on the last step of the customer experience.',
         "Agents are async/autonomous by design — that's the value — but it means the end user may not be present when the agent acts, so high-risk/irreversible actions need to re-engage them first.",
         'In the Owl Trade example, Alex asked ChatGPT to monitor price drops on orange juice futures. Because he set an alert, Owl Trade drafted a trade for him when the price dipped. But Owl Trade wants to make sure Alex is asked for confirmation to actually make the trade.',
-        "Leveraging one of Twilio's other products, Verify messaging, Owl Trade is able to pull Alex back in via text message. This allows Alex to verify the trade without having to go back into ChatGPT.",
+        "Leveraging one of Twilio's other products, Verify messaging, Owl Trade is able to pull Alex back in via text message. This allows Alex to verify the trade without having to go back into ChatGPT or Owl Trade himself.",
         "High-risk approvals is one of the distinguishing features of Twilio's agent identity product: it helps increase customer engagement, can increase transactions on the platform, and provides a seamless experience for times when you want agents to act autonomously but with an extra guardrail.",
     
     ]),
     dict(key="slideChallenges", num="10", section="Building Trust in the Age of AI", title="Challenges", time="1.5 min", notes=[
         'Because this was a new product bet, we had no existing customer base that we could leverage when thinking about what UX customers might expect or benefit from. We had to make a lot of assumptions about how customers might use this product, which we are just now getting to test with design partners.',
         'The High-risk approval flow involved cross-team dependency between identity teams and Twilio messaging teams. So timelines there were impacted based on dependencies.',
-        'Some demos/flows were speculative and we had to build ahead of the product actually existing for demonstrative purposes at board meetings and conferences.',
+        'Some demos/flows were speculative and we had to build ahead of the product actually existing for demonstrative purposes at board meetings and conferences. But because this was a new product, there was a good amount of ambiguity at the beginning where it really helped to have more concrete visuals to help people understand. And so while the artifacts were very helpful, the challenge here was really managing design bandwidth between figuring out the actual product UX and trying to create a demonstration early on.',
         'And lastly, API scope was still being negotiated with engineering mid-design (so for example, that user search endpoint I mentioned that would be required in order to link between Agents and Users).',
     
     ]),
     dict(key="slideValidating", num="11", section="Building Trust in the Age of AI", title="What We're Validating", time="1.5 min", notes=[
         "Like I mentioned, this product has not been publicly released yet. So while we don't have concrete metrics yet, we are currently beginning our design partners program and already have lined up key items we're hoping to gain clarity on.",
         'For example, finding out if our assumptions around customization and configurations match how customers would use the product and what customers want solved next to keep using and building on agent identity<br>',
+        "We know that this is really just the foundation for agent identity and getting started. But there's a lot of opportunity area following, with things like those high-risk approval flows I mentioned.",
     
     ]),
     dict(key="slideQuestionsAgentIdentity", num="12", section="Building Trust in the Age of AI", title="Questions? (pause before SDK case study)", time="—", notes=[
@@ -224,11 +234,13 @@ DECK = [
     
     ]),
     dict(key="journeySlide-1", num="19", section="Driving SDK Adoption", title="The Customer Evaluation Journey", step="Step 1 — Explore Stytch's products", time="1.5 min", notes=[
+        '<p dir="ltr"><span style="white-space-collapse: preserve;">That leads me to the SDK integration playground that we built.</span></p>',
         '<p dir="ltr"><span style="white-space-collapse: preserve;">If we look at how a customer might evaluate Stytch\'s SDK, there are a couple main things they\'re likely looking at.</span></p>',
         '<p dir="ltr"><span style="white-space-collapse: preserve;">What products are offered to me?</span></p>',
         '<p dir="ltr"><span style="white-space-collapse: preserve;">And how might I customize the actual look so it fits into my own product?</span></p>',
         '<span style="white-space: pre-wrap;"><p dir="ltr">Starting with that first question, what products are offered to me?</p></span>',
         '<p dir="ltr">Being able to showcase our full product catalog — since customers evaluating Stytch often don\'t know Stytch\'s full product offerings yet -- along with all the available styling customizations, would allow people to actually interact with the prebuilt UI.</p>',
+        '<p dir="ltr">They would be able to test out how different products worked, and what they would look if configured in the actual sign up or login experience.</p>',
         '<b>The live tool autoplays through several product chips on its own — let it play, nothing to click.</b>',
     
     ]),
@@ -244,14 +256,15 @@ DECK = [
     ]),
     dict(key="journeySlide-3", num="19", section="Driving SDK Adoption", title="The Customer Evaluation Journey", step="Step 3 — Try the real flow, not a screenshot", time="1.5 min", notes=[
         'The first two steps only show the first screen of the prebuilt SDK UI, i.e., what an end user lands on. But because we wanted to showcase the actual products, we needed customers to be able to click through actual flows.&nbsp;',
-        'Part of understanding "what will this look like in my product" also meant understanding how the flows actually worked.',
+        'Part of understanding "what will this look like in my product" also meant understanding how the product flows actually worked.',
         'That led to including a fully working SDK instance as the preview, not a static image. Customers click through the real sign-up/login flow (email → OTP → success) to judge brand fit AND actual behavior at once.',
         '<strong>This step is fully scripted</strong> (auto-types email, auto-fills OTP, shows success) — just narrate over it.',
     
     ]),
     dict(key="journeySlide-4", num="19", section="Driving SDK Adoption", title="The Customer Evaluation Journey", step="Step 4 — Shippable code", time="1 min", notes=[
-        'Lastly, to really close the loop on the SDK being quick to get up and running, we included the ability to pull the actual code behind the SDK instance.',
+        'Lastly, to really close the loop on the SDK being quick to get up and running, we included the ability to pull the actual code behind the SDK instance that you see in the preview.',
         'Clicking View Code turns the live config into a real integration snippet the moment evaluation ends.',
+        'If you were a prospect playing around with the SDK, and you had imported all of your brand styling, you would essentially have created a fully working instance of the SDK that you could copy and paste the code into your product.',
     
     ]),
     dict(key="wizard-stytch-journey-1", num="19", section="Driving SDK Adoption", title="The Customer Evaluation Journey", step="Wizard — How configuration is organized: how we got here (1/2)", time="45 sec", notes=[
@@ -260,7 +273,7 @@ DECK = [
         '<p dir="ltr"><span style="white-space-collapse: preserve;">Then came figuring out how to actually present these configurations in a way that made sense and was easy to digest. From our audit of the styling config, we saw how quickly this could become confusing.</span></p>',
         '<p dir="ltr"><span style="white-space-collapse: preserve;">I\'ve included a few ways we tried grouping different customizations, all at different levels of granularity. The first explores breaking down by stylistic UI element: buttons, text, container, etc. We found that this still made it hard to see how properties matched to the UI live, and required a lot of jumping around. </span></p>',
         '<p dir="ltr"><span style="white-space-collapse: preserve;">The second looks into how we might reduce clutter, but overall it ends up being harder for a customer to initially gauge what is offered. Which again was one of the original pain points.</span></p>',
-        '<p dir="ltr"><span style="white-space-collapse: preserve;">And then the last version here you can see what we actually shipped. Keeping everything in line and flat so nothing is ever hidden.</span></p>',
+        '<p dir="ltr"><span style="white-space-collapse: preserve;">And then the last version here you can see what we actually shipped. Keeping everything in line and flat so nothing is ever hidden. It\'s really easy to do a quick scan of what is available.</span></p>',
     
     ]),
     dict(key="wizard-stytch-journey-2", num="19", section="Driving SDK Adoption", title="The Customer Evaluation Journey", step="Wizard — How products are picked: how we got here (2/2)", time="30 sec", notes=[
@@ -277,7 +290,7 @@ DECK = [
     dict(key="slideImpact", num="21", section="Driving SDK Adoption", title="Impact", time="1.5 min", notes=[
         'Our Solutions Engineers whose one-off demos this replaced started using the Integration Builder themselves, on real customer and prospect calls. Saved a huge amount of time that was previously spent building one-offs.',
         'Reduced time to value for customers -- View Code turns the end of evaluation directly into a working integration.',
-        'And most importantly, better decision-making experience for customers. They were able to validate product fit, brand fit, and real UX flows themselves.',
+        'And most importantly, better decision-making experience for customers. They were able to validate product fit, brand fit, and real UX flows themselves which was ultimately the main problem we were trying to solve for.',
     
     ]),
     dict(key="slideThankYou", num="22", section="Driving SDK Adoption", title="Thank You / Questions?", time="1 min", notes=[
