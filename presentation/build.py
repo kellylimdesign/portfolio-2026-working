@@ -134,7 +134,24 @@ SHARED_TOPBAR_CSS = """
     position:fixed; top:0; left:0; right:0; height:56px;
     display:grid; grid-template-columns:1fr auto 1fr; align-items:center;
     padding:0 64px; z-index:1000; background:var(--cream);
+    transition:opacity .3s ease;
   }
+  /* the wizard overlay sits above this bar (z-index:1100, see below) so its
+     backdrop can visually dim the topbar instead of cutting off underneath
+     it — but .topbar itself needs to stay *above* the overlay too, or its
+     own position:fixed+z-index stacking context traps sharedPrevBtn/
+     sharedNextBtn at z-index:1000 regardless of their own z-index, making
+     them unclickable through the overlay. Bumping the whole bar above the
+     overlay (1200 > 1100) keeps next/prev usable while a wizard is open —
+     which is the deck's own established behavior (the wizard's in-modal
+     arrows and the shared next/prev already delegate to the same go()) —
+     and fading its opacity down while :has() detects an active wizard
+     keeps the "covered" look the overlay's backdrop is going for.
+  */
+  .topbar{z-index:1200;}
+  body:has(#historyOverlay.active) .topbar,
+  body:has(#stytchHistoryOverlay.active) .topbar{opacity:.4;}
+
   .brand{font-family:var(--mono); font-size:12px; letter-spacing:.06em; color:var(--ink-45); justify-self:start;}
   .brand-home{display:inline-flex; align-items:center; gap:6px; color:inherit; text-decoration:none;}
   .brand-home svg{width:14px; height:14px;}
@@ -174,6 +191,19 @@ SHARED_TOPBAR_CSS = """
      entirely removes the scrollable page height in the first place, so
      there's never anywhere for a stray scroll to land. */
   #phaseAgentIdentity, #phaseStytch{position:absolute; inset:0;}
+  /* the shared topbar sits at z-index:1000 so it stays above ordinary deck
+     content -- but the "how we got here" wizard overlay is only z-index:100
+     in the standalone deck (correctly above *its own* topbar, which is a
+     much lower z-index:50 there), so once merged it was rendering *behind*
+     this shared one instead of covering it. Bump it above the shared topbar
+     specifically for the merged build, without touching the standalone
+     deck's own (already-correct) stacking. */
+  /* !important: this block is concatenated *before* the deck's own scoped
+     CSS (same reason the topbar-hiding rule above needs it too) — same
+     selector specificity, so without it the later rule would win instead */
+  #phaseAgentIdentity .history-overlay{z-index:1100 !important;}
+  /* same fix, same reason, for the SDK deck's own single-wizard overlay */
+  #phaseStytch .history-overlay{z-index:1100 !important;}
 """
 
 full_css = GLOBAL_CSS + "\n" + SHARED_TOPBAR_CSS + "\n" + ai_scoped_css + "\n" + st_scoped_css
@@ -233,6 +263,26 @@ COORDINATOR_JS = """
   // notes window (on your other monitor, or your phone) advances itself.
   let speakerWin = null;
   function currentNoteKey(){
+    // the "how we got here" wizard is an overlay on top of a slide, not a
+    // slide change, so the plain .slide.active lookup below never moves
+    // while it's open -- check it first and key off its own step (Trust's
+    // wizard has multiple named groups sharing one overlay shell; the SDK
+    // deck's is a single, group-less wizard reusing the same overlay/step
+    // markup -- #historyOverlay is Trust's original, unrenamed id, and
+    // #stytchHistoryOverlay is the SDK deck's own, renamed during the merge
+    // specifically to avoid colliding with Trust's, so checking both is
+    // unambiguous regardless of which phase is active)
+    const aiOverlay = document.getElementById('historyOverlay');
+    if (aiOverlay && aiOverlay.classList.contains('active')) {
+      const stage = aiOverlay.querySelector('.history-stage.active-group[data-history-group]');
+      const stepEl = stage ? stage.querySelector('.history-step.active[data-step]') : null;
+      if (stage && stepEl) return 'wizard-' + stage.dataset.historyGroup + '-' + stepEl.dataset.step;
+    }
+    const stOverlay = document.getElementById('stytchHistoryOverlay');
+    if (stOverlay && stOverlay.classList.contains('active')) {
+      const stepEl = stOverlay.querySelector('.history-step.active[data-step]');
+      if (stepEl) return 'wizard-stytch-journey-' + stepEl.dataset.step;
+    }
     const root = activePhase === 'agentIdentity' ? elAI : elST;
     const activeSlide = root.querySelector('.slide.active');
     if (!activeSlide || !activeSlide.id) return null;

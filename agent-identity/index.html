@@ -5997,10 +5997,11 @@
   // (finishing the agents wizard shouldn't skip the consent one, or vice
   // versa); historyPendingAdvance/-Step track whether + where the deferred
   // "next" transition should land once the CURRENTLY open one closes.
-  // in presentation mode, treat every "how we got here" detour as already
-  // seen so the timed talk never gets auto-derailed into one — the manual
-  // "See how we got here →" links still work if the presenter wants to show one
-  const historySeenGroups = { agents:PRESENT, consent:PRESENT, 'grant-access':PRESENT };
+  // presentation mode now walks these same as the standalone deck: "next"
+  // auto-opens the first unseen wizard for the group it's leaving, then each
+  // wizard step is its own "next" press (see go(dir)'s overlay-active
+  // branch), landing back on the real next step once the wizard's done.
+  const historySeenGroups = { agents:false, consent:false, 'grant-access':false };
   // one-time auto-demo of the consent-customize panel's scroll (see
   // updateHistoryStep) — its content genuinely overflows (scrollHeight >
   // clientHeight, the last 1-2 color rows sit below the fold) with no

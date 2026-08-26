@@ -45,6 +45,21 @@ PLAN = [
     (20, "slideThankYou", None),
 ]
 
+# "how we got here" wizards: after capturing the PLAN entry named here, walk
+# forward through the wizard via real #sharedNextBtn clicks (the same path a
+# live presentation takes -- pressing next auto-opens the first unseen
+# wizard for the step being left, then each wizard step is its own "next"),
+# capturing one thumbnail per wizard step. One extra click at the end closes
+# the wizard and lands back on the real next step, which the next PLAN entry
+# below re-captures on its own via direct navigation, so it's left uncaptured
+# here on purpose.
+WIZARD_AFTER = {
+    "slideCustomerJourney-2": ["wizard-consent-1", "wizard-consent-2"],
+    "slideCustomerJourney-3": ["wizard-agents-1", "wizard-agents-2", "wizard-agents-3", "wizard-agents-4"],
+    "slideEndUserJourney-3": ["wizard-grant-access-1", "wizard-grant-access-2"],
+    "journeySlide-4": ["wizard-stytch-journey-1", "wizard-stytch-journey-2"],
+}
+
 def get_active_slide_handle(page):
     return page.evaluate_handle("""() => {
         const ai = document.getElementById('phaseAgentIdentity');
@@ -70,6 +85,17 @@ with sync_playwright() as p:
     page.goto(f"file://{BASE}/presentation/index.html")
     page.wait_for_timeout(500)
 
+    def capture(key):
+        raw = page.screenshot(clip=visible_viewport_clip(page))
+        img = Image.open(io.BytesIO(raw)).convert("RGB")
+        # downscale for a fast-loading thumbnail -- these are recognition aids,
+        # not full-fidelity reproductions
+        img.thumbnail((640, 640))
+        buf = io.BytesIO()
+        img.save(buf, format="JPEG", quality=72)
+        results[key] = base64.b64encode(buf.getvalue()).decode("ascii")
+        print(f"captured {key} ({img.size[0]}x{img.size[1]}, {len(buf.getvalue())} bytes)")
+
     results = {}
     last_global_idx = None
     for global_idx, key, step in PLAN:
@@ -87,15 +113,18 @@ with sync_playwright() as p:
                 if (item) item.click();
             }}""")
             page.wait_for_timeout(500)
-        raw = page.screenshot(clip=visible_viewport_clip(page))
-        img = Image.open(io.BytesIO(raw)).convert("RGB")
-        # downscale for a fast-loading thumbnail -- these are recognition aids,
-        # not full-fidelity reproductions
-        img.thumbnail((640, 640))
-        buf = io.BytesIO()
-        img.save(buf, format="JPEG", quality=72)
-        results[key] = base64.b64encode(buf.getvalue()).decode("ascii")
-        print(f"captured {key} ({img.size[0]}x{img.size[1]}, {len(buf.getvalue())} bytes)")
+        capture(key)
+
+        wizard_keys = WIZARD_AFTER.get(key)
+        if wizard_keys:
+            for wizard_key in wizard_keys:
+                page.evaluate("document.getElementById('sharedNextBtn').click()")
+                page.wait_for_timeout(600)
+                capture(wizard_key)
+            # one more press: closes the wizard, lands back on the real next
+            # step (re-captured by the next PLAN entry via direct navigation)
+            page.evaluate("document.getElementById('sharedNextBtn').click()")
+            page.wait_for_timeout(500)
 
     b.close()
 

@@ -1168,9 +1168,10 @@
   // "entered slide 0" transition — see the __onActivate check below
   let prevIdx = -1;
   // set the first time pressing next from the Journey slide's step 4 opens
-  // "How We Got Here" instead of advancing — see go(dir). In presentation
-  // mode this detour is always skipped for time; the manual link still works.
-  let journeyHistoryAutoOpened = PRESENT;
+  // "How We Got Here" instead of advancing — see go(dir). Presentation mode
+  // now walks this detour too (each wizard step is its own "next"), same as
+  // Trust's equivalent wizards — see historySeenGroups there.
+  let journeyHistoryAutoOpened = false;
   const dotsEl = document.getElementById('stytchDots');
   slides.forEach((s, i) => {
     const d = document.createElement('div');
