@@ -14,7 +14,10 @@ THUMBS = json.load(open(os.path.join(HERE, "notes-thumbs.json")))
 # all sharing the same "num" badge since they're one slide in the deck
 DECK = [
     dict(key="slideAboutMe", num="01", section="Intro", title="About Me", time="1–2 min", notes=[
-        "Intro: Senior Product Designer @ Twilio, previously Stytch (acquired by Twilio, Nov 2025).",
+        "Intro:&nbsp;",
+        "Currently a Product Designer @ Twilio focusing on building Authentication for AI agents",
+        "Before Twilio, I was at a company called Stytch. We were an authentication company, on the smaller side about 60 employees total, and I was 1 out of 2 product designers. We were acquired by Twilio last fall to build out a full identity platform within Twilio.",
+        "And then I'm originally from the Bay Area, and currently live in New York City.",
     ]),
     dict(key="slideHero", num="02", section="Building Trust in the Age of AI", title="Hero", time="30 sec", notes=[
         "The first project I'll walk through is a new product launch we're working on at Twilio around agent identity",
