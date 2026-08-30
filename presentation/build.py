@@ -409,6 +409,17 @@ COORDINATOR_JS = """
   document.getElementById('sharedPrevBtn').onclick = () => go(-1);
   document.getElementById('sharedNextBtn').onclick = () => go(1);
   window.addEventListener('keydown', (e) => {
+    // each deck's OWN keydown listener already skips real form fields (see
+    // that same guard in agent-identity/index.html's guided "Try it
+    // yourself" task), but that listener's arrow/r/s handling is itself
+    // gated off by __aiPresentMerged in favor of this shared one -- so this
+    // is the listener that's actually live once merged, and needs the same
+    // guard. Without it, typing in the guided task's real login/consent
+    // inputs (or the existing consent-modal name/URL fields) would hijack
+    // the deck: any "r"/"s" jumps slides or opens speaker view mid-keystroke,
+    // and arrow keys (e.g. moving the cursor while editing) navigate away.
+    const tag = (e.target && e.target.tagName) || '';
+    if (tag === 'INPUT' || tag === 'TEXTAREA' || (e.target && e.target.isContentEditable)) return;
     if (e.key === 'ArrowRight') go(1);
     if (e.key === 'ArrowLeft') go(-1);
     if (e.key === 'r' || e.key === 'R') jumpTo(0);
