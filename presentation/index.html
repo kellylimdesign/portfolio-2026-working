@@ -59,9 +59,7 @@
   */
   .topbar{z-index:1200;}
   body:has(#historyOverlay.active) .topbar,
-  body:has(#historyOverlay.active) .exit-link,
-  body:has(#stytchHistoryOverlay.active) .topbar,
-  body:has(#stytchHistoryOverlay.active) .exit-link{opacity:.4;}
+  body:has(#stytchHistoryOverlay.active) .topbar{opacity:.4;}
 
   /* matches the per-deck redesign (agent-identity/stytch-sdk-integration-
      builder): plain sans deck-label + centered dots/counter/arrows +
@@ -84,19 +82,12 @@
   }
   .navbtn:hover{color:var(--ink);}
   .navbtn svg{width:14px; height:14px;}
-  /* fixed top-right "Exit" control, same behavior as the standalone decks'
-     (just "Exit" at rest, grows to "Exit to landing page" on hover) — sits
-     outside .topbar so it isn't a grid item, but still needs the same
-     z-index:1200 treatment (and the opacity dim above) to stay usable/
-     consistent while the wizard overlay is open. */
-  .exit-link{
-    position:fixed; top:20px; right:36px; z-index:1200;
-    display:inline-block; overflow:hidden; white-space:nowrap; max-width:23px;
-    font-family:var(--sans); font-size:13px; font-weight:400; color:var(--ink-45);
-    text-decoration:none; transition:color .2s ease, max-width .6s ease;
-    background:var(--cream);
-  }
-  .exit-link:hover{color:var(--ink); max-width:125px;}
+  /* no "Exit" control on the merged presentation — unlike the two
+     standalone decks, this build isn't meant to be left mid-talk, so
+     there's no on-screen link back to the landing page here. Each deck's
+     own .exit-link (carried over from its standalone body content) is
+     still hidden below alongside its own .topbar so it doesn't leak
+     through as a stray duplicate. */
   /* Speaker View is presenter-only (opened with the "S" key regardless, see
      COORDINATOR_JS) and doesn't need to be a visible on-screen control —
      kept in the DOM (not removed) so the existing getElementById().onclick
@@ -109,8 +100,14 @@
   }
   .speaker-view-btn:hover{color:var(--ink); border-color:var(--ink-45);}
   .speaker-view-btn svg{width:13px; height:13px;}
-  /* hide each deck's OWN topbar entirely — the shared one above replaces both */
-  #phaseAgentIdentity > .topbar, #phaseStytch > .topbar{display:none !important;}
+  /* hide each deck's OWN topbar entirely — the shared one above replaces
+     both. Each standalone deck's body also carries its own .exit-link
+     sibling (added alongside its own .topbar, not nested inside it); the
+     merged presentation doesn't use an Exit control at all (see above),
+     so that needs hiding here too or it leaks through as a stray, fully
+     functional "Exit to landing page" link no design intends to show. */
+  #phaseAgentIdentity > .topbar, #phaseStytch > .topbar,
+  #phaseAgentIdentity > .exit-link, #phaseStytch > .exit-link{display:none !important;}
   /* both phase wrappers hold a child .deck{height:100vh}, and neither wrapper
      itself is taken out of normal flow -- so before showPhase() sets one to
      display:none on the very first render, the page is briefly ~200vh tall
@@ -2509,8 +2506,6 @@
       </button>
     </div>
   </div>
-
-  <a class="exit-link" href="../" aria-label="Exit to landing page">Exit&nbsp;to landing page</a>
 
 <div id="phaseAgentIdentity">
 
@@ -9154,10 +9149,23 @@
   });
   document.getElementById('speakerViewBtn').onclick = openSpeakerView;
 
+  // slide 1 (global index 0) is the About Me intro, not part of either case
+  // study, so it gets its own label rather than reading "Twilio" before
+  // Twilio content has actually started -- everything else in the
+  // agentIdentity phase (slides 2-12) is "Twilio", everything in the
+  // stytch phase (slides 13-22) is "Stytch". Keyed off the global index
+  // (not just activePhase) since slide 1 is itself part of the
+  // agentIdentity phase -- phase alone can't distinguish it from slide 2.
+  function deckLabelFor(gi){
+    if (gi === 0) return 'Intro';
+    return activePhase === 'agentIdentity' ? 'Twilio' : 'Stytch';
+  }
+
   function syncTopbar(){
     const gi = currentGlobalIndex();
     counterNowEl.textContent = String(gi + 1).padStart(2, '0');
     dotEls.forEach((d, i) => d.classList.toggle('active', i === gi));
+    deckLabelEl.textContent = deckLabelFor(gi);
     pushNotesState();
   }
 
@@ -9165,7 +9173,6 @@
     activePhase = phase;
     elAI.style.display = phase === 'agentIdentity' ? '' : 'none';
     elST.style.display = phase === 'stytch' ? '' : 'none';
-    deckLabelEl.textContent = phase === 'agentIdentity' ? 'Twilio' : 'Stytch';
     syncTopbar();
   }
 
