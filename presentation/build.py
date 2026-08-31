@@ -152,32 +152,53 @@ SHARED_TOPBAR_CSS = """
   body:has(#historyOverlay.active) .topbar,
   body:has(#stytchHistoryOverlay.active) .topbar{opacity:.4;}
 
-  .brand{font-family:var(--mono); font-size:12px; letter-spacing:.06em; color:var(--ink-45); justify-self:start;}
-  .brand-home{display:inline-flex; align-items:center; gap:6px; color:inherit; text-decoration:none;}
-  .brand-home svg{width:14px; height:14px;}
-  .brand-home:hover{color:var(--ink);}
-  .dots{justify-self:center; display:flex; gap:6px; flex-wrap:wrap; max-width:420px; justify-content:center;}
+  /* matches the per-deck redesign (agent-identity/stytch-sdk-integration-
+     builder): plain sans deck-label + centered dots/counter/arrows +
+     fixed-corner "Exit", instead of the old mono brand link + circled
+     arrows. sharedDeckLabel's text is kept in sync with whichever phase is
+     active by showPhase() below ("Twilio" / "Stytch") since this bar spans
+     both decks as one continuous presentation. .dots keeps its own
+     flex-wrap/max-width (unlike the single-deck versions) since a 22-slide
+     combined track needs to wrap. */
+  .deck-label{font-family:var(--sans); font-size:13px; color:var(--ink-45); justify-self:start;}
+  .dots{display:flex; align-items:center; gap:7px; flex-wrap:wrap; max-width:420px; justify-content:center;}
   .dot{width:6px; height:6px; border-radius:50%; background:var(--line); transition:background .2s;}
   .dot.active{background:var(--ink);}
-  .counter-nav{justify-self:end; display:flex; align-items:center; gap:10px;}
-  .counter{font-family:var(--mono); font-size:12px; letter-spacing:.06em; color:var(--ink-45);}
+  .counter-nav{justify-self:center; display:flex; align-items:center; gap:10px;}
+  .counter{font-family:var(--sans); font-size:12px; color:var(--ink-45);}
   .navbtn{
-    width:26px; height:26px; border-radius:50%;
-    border:1px solid var(--line); background:transparent;
-    display:flex; align-items:center; justify-content:center;
-    cursor:pointer; color:var(--ink); flex-shrink:0;
+    width:26px; height:26px; border:none; background:transparent;
+    display:flex; align-items:center; justify-content:center; cursor:pointer;
+    color:var(--ink-45); flex-shrink:0; transition:color .15s ease;
   }
-  .navbtn:hover{background:var(--ink); color:var(--cream); border-color:var(--ink);}
+  .navbtn:hover{color:var(--ink);}
   .navbtn svg{width:14px; height:14px;}
+  /* no "Exit" control on the merged presentation — unlike the two
+     standalone decks, this build isn't meant to be left mid-talk, so
+     there's no on-screen link back to the landing page here. Each deck's
+     own .exit-link (carried over from its standalone body content) is
+     still hidden below alongside its own .topbar so it doesn't leak
+     through as a stray duplicate. */
+  /* Speaker View is presenter-only (opened with the "S" key regardless, see
+     COORDINATOR_JS) and doesn't need to be a visible on-screen control —
+     kept in the DOM (not removed) so the existing getElementById().onclick
+     wiring below still has an element to attach to. */
   .speaker-view-btn{
-    appearance:none; cursor:pointer; display:inline-flex; align-items:center; gap:6px;
+    display:none;
+    appearance:none; cursor:pointer; align-items:center; gap:6px;
     font-family:var(--mono); font-size:11px; letter-spacing:.04em; color:var(--ink-45);
     background:transparent; border:1px solid var(--line); border-radius:20px; padding:5px 12px;
   }
   .speaker-view-btn:hover{color:var(--ink); border-color:var(--ink-45);}
   .speaker-view-btn svg{width:13px; height:13px;}
-  /* hide each deck's OWN topbar entirely — the shared one above replaces both */
-  #phaseAgentIdentity > .topbar, #phaseStytch > .topbar{display:none !important;}
+  /* hide each deck's OWN topbar entirely — the shared one above replaces
+     both. Each standalone deck's body also carries its own .exit-link
+     sibling (added alongside its own .topbar, not nested inside it); the
+     merged presentation doesn't use an Exit control at all (see above),
+     so that needs hiding here too or it leaks through as a stray, fully
+     functional "Exit to landing page" link no design intends to show. */
+  #phaseAgentIdentity > .topbar, #phaseStytch > .topbar,
+  #phaseAgentIdentity > .exit-link, #phaseStytch > .exit-link{display:none !important;}
   /* both phase wrappers hold a child .deck{height:100vh}, and neither wrapper
      itself is taken out of normal flow -- so before showPhase() sets one to
      display:none on the very first render, the page is briefly ~200vh tall
@@ -210,8 +231,7 @@ full_css = GLOBAL_CSS + "\n" + SHARED_TOPBAR_CSS + "\n" + ai_scoped_css + "\n" +
 
 SHARED_TOPBAR_HTML = """
   <div class="topbar">
-    <div class="brand"><a class="brand-home" href="../"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M15 18l-6-6 6-6"/></svg>Back to landing page</a></div>
-    <div class="dots" id="sharedDots"></div>
+    <div class="deck-label" id="sharedDeckLabel">Twilio</div>
     <div class="counter-nav">
       <button class="speaker-view-btn" id="speakerViewBtn" title="Open speaker notes in a separate window (S)">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="14" rx="2"/><path d="M3 9h18"/></svg>
@@ -220,7 +240,9 @@ SHARED_TOPBAR_HTML = """
       <button class="navbtn" id="sharedPrevBtn" aria-label="Previous">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M15 18l-6-6 6-6"/></svg>
       </button>
-      <div class="counter"><span id="sharedCounterNow">01</span> / <span id="sharedCounterTotal">00</span></div>
+      <span class="counter" id="sharedCounterNow">01</span>
+      <div class="dots" id="sharedDots"></div>
+      <span class="counter" id="sharedCounterTotal">00</span>
       <button class="navbtn" id="sharedNextBtn" aria-label="Next">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 18l6-6-6-6"/></svg>
       </button>
@@ -237,6 +259,7 @@ COORDINATOR_JS = """
   const dotsEl = document.getElementById('sharedDots');
   const counterTotalEl = document.getElementById('sharedCounterTotal');
   const counterNowEl = document.getElementById('sharedCounterNow');
+  const deckLabelEl = document.getElementById('sharedDeckLabel');
 
   let activePhase = 'agentIdentity';
   const totalAI = AI.visibleCount;
@@ -323,10 +346,23 @@ COORDINATOR_JS = """
   });
   document.getElementById('speakerViewBtn').onclick = openSpeakerView;
 
+  // slide 1 (global index 0) is the About Me intro, not part of either case
+  // study, so it gets its own label rather than reading "Twilio" before
+  // Twilio content has actually started -- everything else in the
+  // agentIdentity phase (slides 2-12) is "Twilio", everything in the
+  // stytch phase (slides 13-22) is "Stytch". Keyed off the global index
+  // (not just activePhase) since slide 1 is itself part of the
+  // agentIdentity phase -- phase alone can't distinguish it from slide 2.
+  function deckLabelFor(gi){
+    if (gi === 0) return 'Intro';
+    return activePhase === 'agentIdentity' ? 'Twilio' : 'Stytch';
+  }
+
   function syncTopbar(){
     const gi = currentGlobalIndex();
     counterNowEl.textContent = String(gi + 1).padStart(2, '0');
     dotEls.forEach((d, i) => d.classList.toggle('active', i === gi));
+    deckLabelEl.textContent = deckLabelFor(gi);
     pushNotesState();
   }
 
